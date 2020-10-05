@@ -52,7 +52,7 @@ class AnalysisModule(object):
     def prepare_dirs(self):
         # Create a new out/ directory and move existing one if needed
         if os.path.exists('out/'):
-            name = datetime.now().strftime("%Y-%m-%d_%H:%M:%S") + '_out/'
+            name = datetime.now().strftime("%Y%m%d_%H%M%S") + '_out/'
             os.rename('out/', name)
             print(f"The out/ directory was renamed to {name}")
 
