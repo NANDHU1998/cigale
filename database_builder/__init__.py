@@ -807,7 +807,7 @@ def build_nebular_AGN(base):
     print("Importing {}...".format(nebular_dir + 'lines_AGN.dat'))
     lines = np.genfromtxt(nebular_dir + 'lines_AGN.dat')
 
-    tmp = Table.read(nebular_dir + 'line_wavelengths_AGN.dat', format='ascii')
+    tmp = Table.read(nebular_dir + 'line_wavelengths_AGN.dat', format='ascii') # wavelengths in nm in line_wavelengths_AGN.dat
     wave_lines = tmp['col1'].data
     name_lines = tmp['col2'].data
 
@@ -815,7 +815,6 @@ def build_nebular_AGN(base):
     cont = np.genfromtxt(nebular_dir + 'continuum_AGN.dat')
 
     # Convert wavelength from Å to nm
-    wave_lines *= 0.1
     wave_cont = cont[:3729, 0] * 0.1
 
     # Get the list of metallicities
