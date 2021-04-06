@@ -814,8 +814,8 @@ def build_nebular_AGN(base):
     print("Importing {}...".format(nebular_dir + 'continuum_AGN.dat'))
     cont = np.genfromtxt(nebular_dir + 'continuum_AGN.dat')
 
-    # Convert wavelength from Å to nm
-    wave_cont = cont[:3729, 0] * 0.1
+    # Continuum wavelength in nm
+    wave_cont = cont[:, 0]
 
     # Get the list of metallicities
     metallicities = np.unique(lines[:, 1])
@@ -824,7 +824,7 @@ def build_nebular_AGN(base):
     lines = lines[:, 2:]
     cont = cont[:, 1:]
 
-    # We select only models with ne=100. Other values could be included later
+    # We select only models with ne=xxx. Other values are not read and could be included later
     lines = lines[:, 1::3]
     cont = cont[:, 1::3]
 
