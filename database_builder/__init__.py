@@ -805,6 +805,12 @@ def build_nebular_AGN(base):
 
     nebular_dir = os.path.join(os.path.dirname(__file__), 'nebular_AGN/')
     print("Importing {}...".format(nebular_dir + 'lines_AGN.dat'))
+
+    list_delta_AGN = np.genfromtxt(nebular_dir + 'list_delta_AGN.dat')
+    list_dzetaO_AGN = np.genfromtxt(nebular_dir + 'list_dzetaO_AGN.dat')
+    list_density_AGN = np.genfromtxt(nebular_dir + 'list_density_AGN.dat')
+    list_logU_AGN = np.genfromtxt(nebular_dir + 'list_logU_AGN.dat')
+    
     lines = np.genfromtxt(nebular_dir + 'lines_AGN.dat')
 
     tmp = Table.read(nebular_dir + 'line_wavelengths_AGN.dat', format='ascii') # wavelengths in nm in line_wavelengths_AGN.dat
@@ -812,47 +818,39 @@ def build_nebular_AGN(base):
     name_lines = tmp['col2'].data
 
     print("Importing {}...".format(nebular_dir + 'continuum_AGN.dat'))
-    cont = np.genfromtxt(nebular_dir + 'continuum_AGN.dat')
+    cont = np.genfromtxt(nebular_dir + 'continuum_AGN_0.0.dat')
 
-    # Continuum wavelength in nm
+    # continuum wavelength in nm
     wave_cont = cont[:, 0]
+    wave_cont = np.unique(wave_cont)
+    nb_wvl= len(wave_cont)
 
     # Get the list of metallicities
     metallicities = np.unique(lines[:, 1])
 
     # Keep only the fluxes
     lines = lines[:, 2:]
-    cont = cont[:, 1:]
+    cont = cont[:, 1:] # the fluxes are in W/nm/photon
 
-    # We select only models with ne=xxx. Other values are not read and could be included later
+    # We select only models with ne=1e3cm-3. Other values could be included later
     lines = lines[:, 1::3]
     cont = cont[:, 1::3]
-
-    # Convert lines to W and to a linear scale
-    lines = 10**(lines-7)
-
-    # Convert continuum to W/nm
-    cont *= np.tile(1e-7 * cst.c * 1e9 / wave_cont**2,
-                    metallicities.size)[:, np.newaxis]
 
     # Import lines
     for idx, metallicity in enumerate(metallicities):
         spectra = lines[idx::6, :]
-        for logU, spectrum in zip(np.around(np.arange(-4., -.9, .1), 1),
-                                  spectra.T):
-            models_lines.append(NebularLines_AGN(metallicity, logU, name_lines,
-                                             wave_lines, spectrum))
+        for logU, spectrum in zip(list_logU_AGN, spectra.T):
+            models_lines.append(NebularLines_AGN(metallicity, logU, name_lines, wave_lines, spectrum))
 
     # Import continuum
     for idx, metallicity in enumerate(metallicities):
-        spectra = cont[3729 * idx: 3729 * (idx+1), :]
-        for logU, spectrum in zip(np.around(np.arange(-4., -.9, .1), 1),
-                                  spectra.T):
-            models_cont.append(NebularContinuum_AGN(metallicity, logU, wave_cont,
-                                                spectrum))
+        spectra = cont[nb_wvl * idx: nb_wvl * (idx+1), :]
+        for logU, spectrum in zip(list_logU_AGN, spectra.T):
+            models_cont.append(NebularContinuum_AGN(metallicity, logU, wave_cont, spectrum))
 
     base.add_nebular_lines_AGN(models_lines)
     base.add_nebular_continuum_AGN(models_cont)
+
 
 
 def build_schreiber2016(base):
