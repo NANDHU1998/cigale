@@ -798,13 +798,12 @@ def build_nebular(base):
 
     base.add_nebular_lines(models_lines)
     base.add_nebular_continuum(models_cont)
-
 def build_nebular_AGN(base):
     models_lines = []
     models_cont = []
 
     nebular_dir = os.path.join(os.path.dirname(__file__), 'nebular_AGN/')
-    print("Importing {}...".format(nebular_dir + 'lines_AGN.dat'))
+    print("Importing {}...".format(nebular_dir + 'lines_AGN_0.0.dat'))
 
     list_delta_AGN = np.genfromtxt(nebular_dir + 'list_delta_AGN.dat')
     list_dzetaO_AGN = np.genfromtxt(nebular_dir + 'list_dzetaO_AGN.dat')
@@ -814,10 +813,10 @@ def build_nebular_AGN(base):
     lines = np.genfromtxt(nebular_dir + 'lines_AGN.dat')
 
     tmp = Table.read(nebular_dir + 'line_wavelengths_AGN.dat', format='ascii') # wavelengths in nm in line_wavelengths_AGN.dat
-    wave_lines = tmp['col1'].data
+    wave_lines = tmp['col1'].data # in nm
     name_lines = tmp['col2'].data
 
-    print("Importing {}...".format(nebular_dir + 'continuum_AGN.dat'))
+    print("Importing {}...".format(nebular_dir + 'continuum_AGN_0.0.dat'))
     cont = np.genfromtxt(nebular_dir + 'continuum_AGN_0.0.dat')
 
     # continuum wavelength in nm
@@ -829,16 +828,17 @@ def build_nebular_AGN(base):
     metallicities = np.unique(lines[:, 1])
 
     # Keep only the fluxes
-    lines = lines[:, 2:]
+    lines = lines[:, 2:] # the fluxes are in W/nm/photon ?
     cont = cont[:, 1:] # the fluxes are in W/nm/photon
 
     # We select only models with ne=1e3cm-3. Other values could be included later
     lines = lines[:, 1::3]
     cont = cont[:, 1::3]
 
+
     # Import lines
     for idx, metallicity in enumerate(metallicities):
-        spectra = lines[idx::6, :]
+        spectra = lines[idx::len(metallicities), :]
         for logU, spectrum in zip(list_logU_AGN, spectra.T):
             models_lines.append(NebularLines_AGN(metallicity, logU, name_lines, wave_lines, spectrum))
 
@@ -850,7 +850,6 @@ def build_nebular_AGN(base):
 
     base.add_nebular_lines_AGN(models_lines)
     base.add_nebular_continuum_AGN(models_cont)
-
 
 
 def build_schreiber2016(base):
