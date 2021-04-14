@@ -12,11 +12,13 @@ class NebularContinuum_AGN(object):
 
     """
 
-    def __init__(self, metallicity, logU, wave, lumin):
+    def __init__(self, region, metallicity, logU, wave, lumin):
         """Create a new nebular lines template
 
         Parameters
         ----------
+        region: string
+            NLR or BLR region
         metallicity: float
             Gas phase metallicity
         logU: float
@@ -28,6 +30,7 @@ class NebularContinuum_AGN(object):
 
         """
 
+        self.region = region
         self.metallicity = metallicity
         self.logU = logU
         self.wave = wave
