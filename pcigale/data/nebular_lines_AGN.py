@@ -12,11 +12,13 @@ class NebularLines_AGN(object):
 
     """
 
-    def __init__(self, metallicity, logU, name, wave, ratio):
+    def __init__(self, region, metallicity, logU, name, wave, ratio):
         """Create a new nebular lines template
 
         Parameters
         ----------
+        region: string
+            NLR or BLR region
         metallicity: float
             Gas phase metallicity
         logU: float
@@ -30,6 +32,7 @@ class NebularLines_AGN(object):
 
         """
 
+        self.region = region
         self.metallicity = metallicity
         self.logU = logU
         self.name = name
