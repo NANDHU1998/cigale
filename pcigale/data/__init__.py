@@ -276,6 +276,7 @@ class _NebularLines_AGN(BASE):
     """
 
     __tablename__ = 'nebular_lines_AGN'
+    region = Column(String, primary_key=True)
     metallicity = Column(Float, primary_key=True)
     logU = Column(Float, primary_key=True)
     name = Column(PickleType)
@@ -283,6 +284,7 @@ class _NebularLines_AGN(BASE):
     ratio = Column(PickleType)
 
     def __init__(self, nebular_lines_AGN):
+        self.region = nebular_lines_AGN.region
         self.metallicity = nebular_lines_AGN.metallicity
         self.logU = nebular_lines_AGN.logU
         self.name = nebular_lines_AGN.name
@@ -295,12 +297,14 @@ class _NebularContinuum_AGN(BASE):
     """
 
     __tablename__ = 'nebular_continuum_AGN'
+    region = Column(String, primary_key=True)
     metallicity = Column(Float, primary_key=True)
     logU = Column(Float, primary_key=True)
     wave = Column(PickleType)
     lumin = Column(PickleType)
 
     def __init__(self, nebular_continuum_AGN):
+        self.region = nebular_continuum_AGN.region
         self.metallicity = nebular_continuum_AGN.metallicity
         self.logU = nebular_continuum_AGN.logU
         self.wave = nebular_continuum_AGN.wave
