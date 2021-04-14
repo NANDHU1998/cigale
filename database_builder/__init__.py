@@ -798,58 +798,70 @@ def build_nebular(base):
 
     base.add_nebular_lines(models_lines)
     base.add_nebular_continuum(models_cont)
+
 def build_nebular_AGN(base):
     models_lines = []
-    models_cont = []
+models_cont = []
 
-    nebular_dir = os.path.join(os.path.dirname(__file__), 'nebular_AGN/')
-    print("Importing {}...".format(nebular_dir + 'lines_AGN_0.0.dat'))
+nebular_dir = os.path.join(os.path.dirname(__file__), 'nebular_AGN/')
 
-    list_delta_AGN = np.genfromtxt(nebular_dir + 'list_delta_AGN.dat')
-    list_dzetaO_AGN = np.genfromtxt(nebular_dir + 'list_dzetaO_AGN.dat')
-    list_density_AGN = np.genfromtxt(nebular_dir + 'list_density_AGN.dat')
-    list_logU_AGN = np.genfromtxt(nebular_dir + 'list_logU_AGN.dat')
-    
-    lines = np.genfromtxt(nebular_dir + 'lines_AGN.dat')
+region = ["NLR", "BLR"]
 
-    tmp = Table.read(nebular_dir + 'line_wavelengths_AGN.dat', format='ascii') # wavelengths in nm in line_wavelengths_AGN.dat
-    wave_lines = tmp['col1'].data # in nm
-    name_lines = tmp['col2'].data
+list_delta_NLR = np.genfromtxt(nebular_dir + 'list_delta_NLR.dat')
+list_dzetaO_NLR = np.genfromtxt(nebular_dir + 'list_dzetaO_NLR.dat')
+list_density_NLR = np.genfromtxt(nebular_dir + 'list_density_NLR.dat')
+list_logU_NLR = np.genfromtxt(nebular_dir + 'list_logU_NLR.dat')
 
-    print("Importing {}...".format(nebular_dir + 'continuum_AGN_0.0.dat'))
-    cont = np.genfromtxt(nebular_dir + 'continuum_AGN_0.0.dat')
+list_delta_BLR = np.genfromtxt(nebular_dir + 'list_delta_BLR.dat')
+list_dzetaO_BLR = np.genfromtxt(nebular_dir + 'list_dzetaO_BLR.dat')
+list_density_BLR = np.genfromtxt(nebular_dir + 'list_density_BLR.dat')
+list_logU_BLR = np.genfromtxt(nebular_dir + 'list_logU_BLR.dat')
 
-    # continuum wavelength in nm
-    wave_cont = cont[:, 0]
+tmp = Table.read(nebular_dir + 'line_wavelengths_AGN.dat', format='ascii') # wavelengths in nm in line_wavelengths_AGN.dat
+wave_lines = tmp['col1'].data # in nm
+name_lines = tmp['col2'].data   
+
+for rg in region:
+    # lines
+    print("Importing {}...".format(nebular_dir + 'lines_'+rg+'_0.0.dat'))
+    lines = np.genfromtxt(nebular_dir + 'lines_'+rg+'_0.0.dat') # NLR and BLR should have the same lines         
+    # continuum     
+    print("Importing {}...".format(nebular_dir + 'continuum_'+rg+'_0.0.dat'))
+    cont = np.genfromtxt(nebular_dir + 'continuum_'+rg+'_0.0.dat')
+    wave_cont = cont[:, 0] # continuum wavelength in nm
     wave_cont = np.unique(wave_cont)
     nb_wvl= len(wave_cont)
-
     # Get the list of metallicities
     metallicities = np.unique(lines[:, 1])
-
     # Keep only the fluxes
-    lines = lines[:, 2:] # the fluxes are in W/nm/photon ?
+    lines = lines[:, 2:] # the fluxes are in W/nm/photon
     cont = cont[:, 1:] # the fluxes are in W/nm/photon
-
     # We select only models with ne=1e3cm-3. Other values could be included later
-    lines = lines[:, 1::3]
+    lines = lines[:, 1::3] # we select only the second models with ne=1e3cm-3 for NLR and ne=1e10cm-3 for BLR. Other values could be included later
     cont = cont[:, 1::3]
-
-
     # Import lines
     for idx, metallicity in enumerate(metallicities):
         spectra = lines[idx::len(metallicities), :]
-        for logU, spectrum in zip(list_logU_AGN, spectra.T):
-            models_lines.append(NebularLines_AGN(metallicity, logU, name_lines, wave_lines, spectrum))
-
+        if rg == 'NLR' :
+            for logU, spectrum in zip(list_logU_NLR, spectra.T):
+                models_lines.append(NebularLines_AGN(rg, metallicity, logU, name_lines, wave_lines, spectrum))
+                
+        elif rg == 'BLR' :
+            for logU, spectrum in zip(list_logU_BLR, spectra.T):
+                models_lines.append(NebularLines_AGN(rg, metallicity, logU, name_lines, wave_lines, spectrum))
+                
     # Import continuum
     for idx, metallicity in enumerate(metallicities):
         spectra = cont[nb_wvl * idx: nb_wvl * (idx+1), :]
-        for logU, spectrum in zip(list_logU_AGN, spectra.T):
-            models_cont.append(NebularContinuum_AGN(metallicity, logU, wave_cont, spectrum))
-
-    base.add_nebular_lines_AGN(models_lines)
-    base.add_nebular_continuum_AGN(models_cont)
+        if rg == 'NLR' :
+            for logU, spectrum in zip(list_logU_NLR, spectra.T):
+                 models_cont.append(NebularContinuum_AGN(rg, metallicity, logU, wave_cont, spectrum))
+        if rg == 'BLR' :
+            for logU, spectrum in zip(list_logU_BLR, spectra.T):
+                 models_cont.append(NebularContinuum_AGN(rg, metallicity, logU, wave_cont, spectrum))
+                 
+base.add_nebular_lines_AGN(models_lines)
+base.add_nebular_continuum_AGN(models_cont)
 
 
 def build_schreiber2016(base):
