@@ -17,7 +17,7 @@ class NebularContinuum_AGN(object):
 
         Parameters
         ----------
-        region: string
+       region: string
             NLR or BLR region
         metallicity: float
             Gas phase metallicity
@@ -29,7 +29,6 @@ class NebularContinuum_AGN(object):
             Luminosity density of the nebular continuum in Fλ
 
         """
-
         self.region = region
         self.metallicity = metallicity
         self.logU = logU

@@ -962,28 +962,31 @@ class Database(object):
         else:
             raise Exception('The database is not writable')
 
-    def get_nebular_lines_AGN(self, metallicity, logU):
+    def get_nebular_lines_AGN(self, region, metallicity, logU):
         """
         Get the line ratios corresponding to the given set of parameters.
 
         Parameters
         ----------
+        region: string
+             'NLR or 'BLR'
         metallicity: float
             Gas phase metallicity
         logU: float
             Ionisation parameter
         """
         result = (self.session.query(_NebularLines_AGN).
+                  filter(_NebularLines_AGN.region == region).
                   filter(_NebularLines_AGN.metallicity == metallicity).
                   filter(_NebularLines_AGN.logU == logU).
                   first())
         if result:
-            return NebularLines_AGN(result.metallicity, result.logU, result.name,
+            return NebularLines_AGN(result.region, result.metallicity, result.logU, result.name,
                                 result.wave, result.ratio)
         else:
             return None
 
-    def get_nebular_lines_parameters_AGN(self):
+    def get_nebular_lines_AGN_parameters(self):
         """Get parameters for the nebular lines.
 
         Returns
@@ -1045,7 +1048,7 @@ class Database(object):
 
     def add_nebular_continuum_AGN(self, models):
         """
-        Add nebular continuum templates to the database.
+        Add nebular AGN continuum templates to the database.
         """
         if self.is_writable:
             for model in models:
@@ -1060,9 +1063,9 @@ class Database(object):
             raise Exception('The database is not writable')
         
         
-    def get_nebular_continuum_AGN(self, metallicity, logU):
+    def get_nebular_continuum_AGN(self, region, metallicity, logU):
         """
-        Get the nebular continuum corresponding to the given set of parameters.
+        Get the nebular AGN continuum corresponding to the given set of parameters.
 
         Parameters
         ----------
@@ -1071,17 +1074,18 @@ class Database(object):
         logU: float
             Ionisation parameter
         """
-        result = (self.session.query(_NebularContinuum).
-                  filter(_NebularContinuum.metallicity == metallicity).
-                  filter(_NebularContinuum.logU == logU).
+        result = (self.session.query(_NebularContinuum_AGN).
+                  filter(_NebularContinuum_AGN.region == region).
+                  filter(_NebularContinuum_AGN.metallicity == metallicity).
+                  filter(_NebularContinuum_AGN.logU == logU).
                   first())
         if result:
-            return NebularContinuum_AGN(result.metallicity, result.logU,
+            return NebularContinuum_AGN(result.region, result.metallicity, result.logU,
                                     result.wave, result.lumin)
         else:
             return None
 
-    def get_nebular_continuum_parameters_AGN(self):
+    def get_nebular_continuum_AGN_parameters(self):
         """Get parameters for the nebular continuum.
 
         Returns

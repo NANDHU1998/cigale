@@ -104,7 +104,7 @@ class Configuration(object):
 
         self.config['sed_modules'] = []
         self.config.comments['sed_modules'] = ([""] +
-            ["Avaiable modules to compute the models. The order must be kept."
+            ["Available modules to compute the models. The order must be kept."
             ] +
             ["SFH:"] +
             ["* sfh2exp (double exponential)"] +
@@ -119,7 +119,7 @@ class Configuration(object):
             ["* m2005 (Maraston 2005; note that it cannot be combined with the "
              "nebular module)"] +
             ["Nebular emission:"] +
-            ["* nebular (continuum and line nebular emission)"] +
+            ["* nebular (continuum and line nebular emission)"] +            
             ["Dust attenuation:"] +
             ["* dustatt_modified_CF00 (modified Charlot & Fall 2000 "
              "attenuation law)"] +
@@ -133,6 +133,8 @@ class Configuration(object):
             ["* themis (Themis dust emission models from Jones et al. 2017)"] +
             ["AGN:"] +
             ["* fritz2006 (AGN models from Fritz et al. 2006)"] +
+            [" AGN nebular emission:"] +
+            ["* AGN nebular (continuum and line nebular emission)"] +
             ["Radio:"] +
             ["* radio (synchrotron emission)"] +
             ["Restframe parameters:"] +
