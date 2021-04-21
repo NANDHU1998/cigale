@@ -214,7 +214,7 @@ class NebularEmissionAGN(SedModule):
 
         if self.emission:
            
-            #NLy = sed.info['AGN.n_ly'] # à écrire
+            #NLy = sed.info['AGN.n_ly'] # to be written
             NLy = 1.
             metallicity = self.metallicity
             lines_NLR = self.lines_template_NLR[metallicity]

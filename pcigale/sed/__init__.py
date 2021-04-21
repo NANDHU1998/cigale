@@ -65,6 +65,7 @@ class SED(object):
         self.luminosity = None
         self.luminosities = None
         self.lines = dict()
+        self.lines_AGN = dict()
         self.info = dict()
         self.mass_proportional_info = set()
         self.unit = dict()
@@ -390,6 +391,7 @@ class SED(object):
             sed.luminosities = self.luminosities.copy()
         sed.contribution_names = self.contribution_names[:]
         sed.lines = self.lines.copy()
+        sed.lines_AGN = self.lines_AGN.copy()
         sed.info = self.info.copy()
         sed.unit = self.unit  # No need to copy, the units will not change
         sed.mass_proportional_info = self.mass_proportional_info.copy()
