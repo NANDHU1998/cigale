@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 Bruzual and Charlot (2003) stellar emission module
 ==================================================
@@ -12,12 +7,10 @@ Populations.
 
 """
 
-from collections import OrderedDict
-
 import numpy as np
 
 from . import SedModule
-from ..data import Database
+from ..data import SimpleDatabase as Database
 
 
 class BC03(SedModule):
@@ -29,39 +22,101 @@ class BC03(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("imf", (
+    parameter_list = {
+        "imf": (
             "cigale_list(dtype=int, options=0. & 1.)",
             "Initial mass function: 0 (Salpeter) or 1 (Chabrier).",
             0
-        )),
-        ("metallicity", (
+        ),
+        "metallicity": (
             "cigale_list(options=0.0001 & 0.0004 & 0.004 & 0.008 & 0.02 & "
             "0.05)",
             "Metalicity. Possible values are: 0.0001, 0.0004, 0.004, 0.008, "
             "0.02, 0.05.",
             0.02
-        )),
-        ("separation_age", (
+        ),
+        "separation_age": (
             "cigale_list(dtype=int, minvalue=0)",
             "Age [Myr] of the separation between the young and the old star "
             "populations. The default value in 10^7 years (10 Myr). Set "
             "to 0 not to differentiate ages (only an old population).",
             10
-        ))
-    ])
+        )
+    }
+
+    def convolve(self, sfh):
+        """Convolve the SSP with a Star Formation History
+
+        Given an SFH, this method convolves the info table and the SSP
+        luminosity spectrum.
+
+        Parameters
+        ----------
+        sfh: array of floats
+            Star Formation History in Msun/yr.
+
+        Returns
+        -------
+        spec_young: array of floats
+            Spectrum in W/nm of the young stellar populations.
+        spec_old: array of floats
+            Same as spec_young but for the old stellar populations.
+        info_young: dictionary
+            Dictionary containing various information from the *.?color tables
+            for the young stellar populations:
+            * "m_star": Total mass in stars in Msun
+            * "m_gas": Mass returned to the ISM by evolved stars in Msun
+            * "n_ly": rate of H-ionizing photons (s-1)
+        info_old : dictionary
+            Same as info_young but for the old stellar populations.
+        info_all: dictionary
+            Same as info_young but for the entire stellar population. Also
+            contains "age_mass", the stellar mass-weighted age
+
+        """
+        # We cut the SSP to the maximum age considered to simplify the
+        # computation. We take only the first three elements from the
+        # info table as the others do not make sense when convolved with the
+        # SFH (break strength).
+        info = self.ssp.info[:, :sfh.size]
+        spec = self.ssp.spec[:, :sfh.size]
+
+        # The convolution is just a matter of reverting the SFH and computing
+        # the sum of the data from the SSP one to one product. This is done
+        # using the dot product. The 1e6 factor is because the SFH is in solar
+        # mass per year.
+        info_young = 1e6 * np.dot(info[:, :self.separation_age],
+                                  sfh[-self.separation_age:][::-1])
+        spec_young = 1e6 * np.dot(spec[:, :self.separation_age],
+                                  sfh[-self.separation_age:][::-1])
+
+        info_old = 1e6 * np.dot(info[:, self.separation_age:],
+                                sfh[:-self.separation_age][::-1])
+        spec_old = 1e6 * np.dot(spec[:, self.separation_age:],
+                                sfh[:-self.separation_age][::-1])
+
+        info_all = info_young + info_old
+
+        info_young = dict(zip(["m_star", "m_gas", "n_ly"], info_young))
+        info_old = dict(zip(["m_star", "m_gas", "n_ly"], info_old))
+        info_all = dict(zip(["m_star", "m_gas", "n_ly"], info_all))
+
+        info_all['age_mass'] = np.average(self.ssp.t[:sfh.size],
+                                          weights=info[0, :] * sfh[::-1])
+
+        return spec_young, spec_old, info_young, info_old, info_all
 
     def _init_code(self):
         """Read the SSP from the database."""
         self.imf = int(self.parameters["imf"])
-        self.metallicity = float(self.parameters["metallicity"])
+        self.Z = float(self.parameters["metallicity"])
         self.separation_age = int(self.parameters["separation_age"])
 
-        with Database() as database:
+        with Database("bc03") as db:
             if self.imf == 0:
-                self.ssp = database.get_bc03('salp', self.metallicity)
+                self.ssp = db.get(imf='salp', Z=self.Z)
             elif self.imf == 1:
-                self.ssp = database.get_bc03('chab', self.metallicity)
+                self.ssp = db.get(imf='chab', Z=self.Z)
             else:
                 raise Exception(f"IMF #{self.imf} unknown")
 
@@ -74,12 +129,12 @@ class BC03(SedModule):
             SED object.
 
         """
-        out = self.ssp.convolve(sed.sfh, self.separation_age)
+        out = self.convolve(sed.sfh)
         spec_young, spec_old, info_young, info_old, info_all = out
 
         # We compute the Lyman continuum luminosity as it is important to
         # compute the energy absorbed by the dust before ionising gas.
-        wave = self.ssp.wavelength_grid
+        wave = self.ssp.wl
         w = np.where(wave <= 91.1)
         lum_lyc_young, lum_lyc_old = np.trapz([spec_young[w], spec_old[w]],
                                               wave[w])
@@ -90,7 +145,7 @@ class BC03(SedModule):
         sed.add_module(self.name, self.parameters)
 
         sed.add_info("stellar.imf", self.imf)
-        sed.add_info("stellar.metallicity", self.metallicity)
+        sed.add_info("stellar.metallicity", self.Z)
         sed.add_info("stellar.old_young_separation_age", self.separation_age,
                      unit='Myr')
 

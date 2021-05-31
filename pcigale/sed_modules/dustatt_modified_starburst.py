@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly, Denis Burgarella
-
 """
 Calzetti et al. (2000) and Leitherer et al. (2002) attenuation module
 =====================================================================
@@ -12,8 +6,6 @@ This module implements the Calzetti et al. (2000) and  Leitherer et al. (2002)
 attenuation formulae, adding an UV-bump and a power law.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 
@@ -174,7 +166,7 @@ def a_vs_ebv(wavelength, bump_wave, bump_width, bump_ampl, power_slope):
                 uv_bump(wl_BV, bump_wave, bump_width, bump_ampl))
     EBV = ((k_calzetti2000(wl_BV) * power_law(wl_BV, power_slope)) +
            uv_bump(wl_BV, bump_wave, bump_width, bump_ampl))
-    attenuation *= (EBV_calz[1]-EBV_calz[0]) / (EBV[1]-EBV[0])
+    attenuation *= (EBV_calz[1] - EBV_calz[0]) / (EBV[1] - EBV[0])
 
     return attenuation
 
@@ -212,7 +204,7 @@ def ccm(wave, Rv):
                                           wn - 1.82))
     fcond3 = lambda wn: 1.0 * (Rv * (1.752 - 0.316 * wn -
                                (0.104 / ((wn - 4.67)**2 + 0.341))) +
-                              (-3.090 + 1.825 * wn +
+                               (-3.090 + 1.825 * wn +
                                (1.206 / ((wn - 4.62)**2 + 0.263))))
     fcond4 = lambda wn: 1.0 * (Rv * (1.752 - 0.316 * wn -
                                      (0.104 / ((wn - 4.67)**2 + 0.341)) +
@@ -223,7 +215,7 @@ def ccm(wave, Rv):
                                 np.polyval([0.1207, 0.2130, 0., 0.],
                                            wn - 5.9)))
     fcond5 = lambda wn: 1.0 * (Rv * (np.polyval([-0.070, 0.137, -0.628, -1.073],
-                                                wn-8.)) +
+                                                wn - 8.)) +
                                np.polyval([0.374, -0.420, 4.257, 13.670],
                                           wn - 8.))
 
@@ -301,48 +293,48 @@ class ModStarburstAtt(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("E_BV_lines", (
+    parameter_list = {
+        "E_BV_lines": (
             "cigale_list(minvalue=0.)",
             "E(B-V)l, the colour excess of the nebular lines light for "
             "both the young and old population.",
             0.3
-        )),
-        ("E_BV_factor", (
+        ),
+        "E_BV_factor": (
             "cigale_list(minvalue=0., maxvalue=1.)",
             "Reduction factor to apply on E_BV_lines to compute E(B-V)s "
             "the stellar continuum attenuation. Both young and old population "
             "are attenuated with E(B-V)s. ",
             0.44
-        )),
-        ("uv_bump_wavelength", (
+        ),
+        "uv_bump_wavelength": (
             "cigale_list(minvalue=0.)",
             "Central wavelength of the UV bump in nm.",
             217.5
-        )),
-        ("uv_bump_width", (
+        ),
+        "uv_bump_width": (
             "cigale_list()",
             "Width (FWHM) of the UV bump in nm.",
             35.
-        )),
-        ("uv_bump_amplitude", (
+        ),
+        "uv_bump_amplitude": (
             "cigale_list(minvalue=0.)",
             "Amplitude of the UV bump. For the Milky Way: 3.",
             0.
-        )),
-        ("powerlaw_slope", (
+        ),
+        "powerlaw_slope": (
             "cigale_list()",
             "Slope delta of the power law modifying the attenuation curve.",
             0.
-        )),
-        ("Ext_law_emission_lines", (
+        ),
+        "Ext_law_emission_lines": (
             "cigale_list(dtype=int, options=1 & 2 & 3)",
             "Extinction law to use for attenuating the emissio  n lines flux. "
             "Possible values are: 1, 2, 3. 1: MW, 2: LMC, 3: SMC. MW is "
             "modelled using CCM89, SMC and LMC using Pei92.",
             1
-        )),
-        ("Rv", (
+        ),
+        "Rv": (
             "cigale_list()",
             "Ratio of total to selective extinction, A_V / E(B-V), "
             "for the extinction curve applied to emission lines."
@@ -350,15 +342,15 @@ class ModStarburstAtt(SedModule):
             "For SMC and LMC using Pei92 the value is automatically set to "
             "2.93 and 3.16 respectively, no matter the value you write.",
             3.1
-        )),
-        ("filters", (
+        ),
+        "filters": (
             "string()",
             "Filters for which the attenuation will be computed and added to "
             "the SED information dictionary. You can give several filter "
             "names separated by a & (don't use commas).",
             "B_B90 & V_B90 & FUV"
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         """Get the filters from the database"""
@@ -409,25 +401,25 @@ class ModStarburstAtt(SedModule):
             linewl = np.array([sed.lines[k][0] for k in names])
             if self.ext_law_emLines == 1:
                 self.lineatt['nebular'] = ccm(wl, self.Rv)
-                for name,  att in zip(names, ccm(linewl, self.Rv)):
+                for name, att in zip(names, ccm(linewl, self.Rv)):
                     self.lineatt[name] = att
             elif self.ext_law_emLines == 2:
                 self.lineatt['nebular'] = Pei92(wl, law='smc')
-                for name,  att in zip(names, Pei92(linewl, law='smc')):
+                for name, att in zip(names, Pei92(linewl, law='smc')):
                     self.lineatt[name] = att
             elif self.ext_law_emLines == 3:
                 self.lineatt['nebular'] = Pei92(wl, law='lmc')
-                for name,  att in zip(names, Pei92(linewl, law='lmc')):
+                for name, att in zip(names, Pei92(linewl, law='lmc')):
                     self.lineatt[name] = att
             for k, v in self.lineatt.items():
                 self.lineatt[k] = 10. ** (-.4 * v * self.ebvl)
 
         dust_lumin = 0.
-        contribs = [contrib for contrib in sed.contribution_names if
+        contribs = [contrib for contrib in sed.luminosities if
                     'absorption' not in contrib]
 
         for contrib in contribs:
-            luminosity = sed.get_lumin_contribution(contrib)
+            luminosity = sed.luminosities[contrib]
             if 'nebular' in contrib:
                 attenuation_spec = luminosity * (self.lineatt['nebular'] - 1.)
             else:

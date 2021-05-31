@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013 Institute of Astronomy, University of Cambridge
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Laure Ciesla
-
 """
 Schreiber (2016) IR models module
 =====================================
@@ -12,9 +6,8 @@ This module implements the Schreiber et al. (2016) infra-red models.
 
 """
 
-from collections import OrderedDict
 import numpy as np
-from pcigale.data import Database
+from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
 
@@ -28,8 +21,8 @@ class Schreiber2016(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ('tdust', (
+    parameter_list = {
+        'tdust': (
             'cigale_list(options=15. & 16. & 17. & 18. & 19. & 20. & 21. & '
             '22. & 23. & 24. & 25. & 26. & 27. & 28. & 29. & 30. & 31. & '
             '32. & 33. & 34. & 35. & 36. & 37. & 38. & 39. & 40. & 41. & '
@@ -38,28 +31,23 @@ class Schreiber2016(SedModule):
             "Dust temperature. "
             "Between 15 and 60K, with 1K step.",
             20.
-        )),
-        ('fpah', (
+        ),
+        'fpah': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "Mass fraction of PAH. "
             "Between 0 and 1.",
             0.05
-        ))
-    ])
-
-    out_parameter_list = OrderedDict([
-        ('tdust', 'Dust temperature'),
-        ('fpah', 'Mass fraction of PAH')
-    ])
+        )
+    }
 
     def _init_code(self):
         """Get the model out of the database"""
 
         self.tdust = float(self.parameters["tdust"])
         self.fpah = float(self.parameters["fpah"])
-        with Database() as database:
-            self.model_dust = database.get_schreiber2016(0, self.tdust)
-            self.model_pah = database.get_schreiber2016(1, self.tdust)
+        with Database("schreiber2016") as db:
+            self.model_dust = db.get(type=0, tdust=self.tdust)
+            self.model_pah = db.get(type=1, tdust=self.tdust)
 
         # The models in memory are in W/nm/kg. At the same time we
         # need to normalize them to 1 W here to easily scale them from the
@@ -68,14 +56,14 @@ class Schreiber2016(SedModule):
         # mass in W kg¯¹, The gamma parameter does not affect the fact that it
         # is for 1 kg because it represents a mass fraction of each component.
 
-        self.emissivity = np.trapz((1. - self.fpah) * self.model_dust.lumin +
-                                   self.fpah * self.model_pah.lumin,
-                                   x=self.model_dust.wave)
+        self.emissivity = np.trapz((1. - self.fpah) * self.model_dust.spec +
+                                   self.fpah * self.model_pah.spec,
+                                   x=self.model_dust.wl)
 
         # We want to be able to display the respective contributions of both
         # components, therefore we keep they separately.
-        self.model_dust.lumin *= (1. - self.fpah) / self.emissivity
-        self.model_pah.lumin *= self.fpah / self.emissivity
+        self.model_dust.spec *= (1. - self.fpah) / self.emissivity
+        self.model_pah.spec *= self.fpah / self.emissivity
 
     def process(self, sed):
         """Add the IR re-emission contributions
@@ -99,10 +87,10 @@ class Schreiber2016(SedModule):
         # with the exact model. Fix that later. Maybe directly in the database.
         sed.add_info('dust.mass', luminosity / self.emissivity, True, unit='kg')
 
-        sed.add_contribution('dust.dust_continuum', self.model_dust.wave,
-                             luminosity * self.model_dust.lumin)
-        sed.add_contribution('dust.pah', self.model_pah.wave,
-                             luminosity * self.model_pah.lumin)
+        sed.add_contribution('dust.dust_continuum', self.model_dust.wl,
+                             luminosity * self.model_dust.spec)
+        sed.add_contribution('dust.pah', self.model_pah.wl,
+                             luminosity * self.model_pah.spec)
 
 
 # SedModule to be returned by get_module

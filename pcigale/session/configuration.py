@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
-from collections import OrderedDict
 import multiprocessing as mp
-import os.path
+from pathlib import Path
 import sys
 from textwrap import wrap
 
@@ -15,7 +9,7 @@ import numpy as np
 import validate
 
 from ..managers.parameters import ParametersManager
-from ..data import Database
+from ..data import SimpleDatabase as Database
 from utils.io import read_table
 from .. import sed_modules
 from .. import analysis_modules
@@ -23,16 +17,17 @@ from ..warehouse import SedWarehouse
 from . import validation
 from pcigale.sed_modules.nebular import default_lines
 
-class Configuration(object):
+
+class Configuration:
     """This class manages the configuration of pcigale.
     """
 
-    def __init__(self, filename="pcigale.ini"):
+    def __init__(self, filename=Path("pcigale.ini")):
         """Initialise a pcigale configuration.
 
         Parameters
         ----------
-        filename: string
+        filename: Path
             Name of the configuration file (pcigale.conf by default).
 
         """
@@ -40,20 +35,20 @@ class Configuration(object):
         # pcigale.ini.spec. While this seems to work when doing the pcigale
         # genconf, it actually generates an incorrect pcigale.ini.spec. The only
         # clean solution is to rebuild both files.
-        if os.path.isfile(filename) and not os.path.isfile(filename+'.spec'):
+        if filename.is_file() and not filename.with_suffix('.ini.spec').is_file():
             raise Exception("The pcigale.ini.spec file appears to be missing. "
                             "Please delete the pcigale.ini file and regenrate "
                             "it with 'pcigale init' and then 'pcigale genconf' "
                             "after having filled the initial pcigale.ini "
                             "template.")
         else:
-            self.spec = configobj.ConfigObj(filename+'.spec',
+            self.spec = configobj.ConfigObj(filename.with_suffix('.ini.spec').name,
                                             write_empty_values=True,
                                             indent_type='  ',
                                             encoding='UTF8',
                                             list_values=False,
                                             _inspec=True)
-            self.config = configobj.ConfigObj(filename,
+            self.config = configobj.ConfigObj(filename.name,
                                               write_empty_values=True,
                                               indent_type='  ',
                                               encoding='UTF8',
@@ -64,7 +59,7 @@ class Configuration(object):
         # we actually return the configuration file from the property() method.
         self.config.validate(validate.Validator(validation.functions))
 
-        self.pcigaleini_exists = os.path.isfile(filename)
+        self.pcigaleini_exists = filename.is_file()
 
     def create_blank_conf(self):
         """Create the initial configuration file
@@ -105,12 +100,12 @@ class Configuration(object):
         self.config['sed_modules'] = []
         self.config.comments['sed_modules'] = ([""] +
             ["Available modules to compute the models. The order must be kept."
-            ] +
+             ] +
             ["SFH:"] +
             ["* sfh2exp (double exponential)"] +
             ["* sfhdelayed (delayed SFH with optional exponential burst)"] +
             ["* sfhdelayedbq (delayed SFH with optional constant burst/quench)"
-            ] +
+             ] +
             ["* sfhfromfile (arbitrary SFH read from an input file)"] +
             ["* sfhperiodic (periodic SFH, exponential, rectangle or delayed"
              ")"] +
@@ -119,7 +114,7 @@ class Configuration(object):
             ["* m2005 (Maraston 2005; note that it cannot be combined with the "
              "nebular module)"] +
             ["Nebular emission:"] +
-            ["* nebular (continuum and line nebular emission)"] +            
+            ["* nebular (continuum and line nebular emission)"] +
             ["Dust attenuation:"] +
             ["* dustatt_modified_CF00 (modified Charlot & Fall 2000 "
              "attenuation law)"] +
@@ -133,6 +128,7 @@ class Configuration(object):
             ["* themis (Themis dust emission models from Jones et al. 2017)"] +
             ["AGN:"] +
             ["* fritz2006 (AGN models from Fritz et al. 2006)"] +
+            ["* skirtor2016 (AGN models from Stalevski et al. 2012, 2016)"] +
             [" AGN nebular emission:"] +
             ["* AGN nebular (continuum and line nebular emission)"] +
             ["Radio:"] +
@@ -173,8 +169,8 @@ class Configuration(object):
             sys.exit(1)
 
         # Getting the list of the filters available in pcigale database
-        with Database() as base:
-            filter_list = base.get_filter_names()
+        with Database("filters") as db:
+            filter_list = db.parameters["names"]
         filter_list += [f'line.{line}' for line in default_lines]
 
         if self.config['data_file'] != '':
@@ -312,23 +308,21 @@ class Configuration(object):
         unofficial module that is not in our list
         """
 
-        modules = OrderedDict((('SFH', ['sfh2exp', 'sfhdelayed', 'sfhdelayedbq',
-                                        'sfhfromfile', 'sfhperiodic']),
-                               ('SSP', ['bc03', 'm2005']),
-                               ('nebular', ['nebular']),
-                               ('dust attenuation', ['dustatt_calzleit',
-                                                     'dustatt_powerlaw',
-                                                     'dustatt_2powerlaws',
-                                                     'dustatt_modified_CF00',
-                                                     'dustatt_modified_starburst']),
-                               ('dust emission', ['casey2012', 'dale2014',
-                                                  'dl2007', 'dl2014',
-                                                  'themis']),
-                               ('AGN', ['fritz2006', 'skirtor2016']),
-                               ('radio', ['radio']),
-                               ('restframe_parameters',
-                                ['restframe_parameters']),
-                               ('redshift', ['redshifting'])))
+        modules = {'SFH': ['sfh2exp', 'sfhdelayed', 'sfhdelayedbq',
+                           'sfhfromfile', 'sfhperiodic'],
+                   'SSP': ['bc03', 'm2005'],
+                   'nebular': ['nebular'],
+                   'dust attenuation': ['dustatt_calzleit', 'dustatt_powerlaw',
+                                        'dustatt_2powerlaws',
+                                        'dustatt_modified_CF00',
+                                        'dustatt_modified_starburst'],
+                   'dust emission': ['casey2012', 'dale2014', 'dl2007',
+                                     'dl2014', 'themis'],
+                   'AGN': ['fritz2006', 'skirtor2016'],
+                   'radio': ['radio'],
+                   'restframe_parameters': ['restframe_parameters'],
+                   'redshift': ['redshifting']
+                   }
 
         comments = {'SFH': "ERROR! Choosing one SFH module is mandatory.",
                     'SSP': "ERROR! Choosing one SSP module is mandatory.",

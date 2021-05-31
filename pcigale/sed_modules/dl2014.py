@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013 Institute of Astronomy, University of Cambridge
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 """
 Updated Draine and Li (2007) IR models module
 =====================================
@@ -12,11 +6,9 @@ This module implements the updated Draine and Li (2007) infrared models.
 
 """
 
-from collections import OrderedDict
-
 import numpy as np
 
-from pcigale.data import Database
+from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
 
@@ -32,15 +24,15 @@ class DL2014(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ('qpah', (
+    parameter_list = {
+        'qpah': (
             'cigale_list(options=0.47 & 1.12 & 1.77 & 2.50 & 3.19 & 3.90 & '
             '4.58 & 5.26 & 5.95 & 6.63 & 7.32)',
             "Mass fraction of PAH. Possible values are: 0.47, 1.12, 1.77, "
             "2.50, 3.19, 3.90, 4.58, 5.26, 5.95, 6.63, 7.32.",
             2.50
-        )),
-        ('umin', (
+        ),
+        'umin': (
             'cigale_list(options=0.10 & 0.12 & 0.15 & 0.17 & 0.20 & 0.25 & '
             '0.30 & 0.35 & 0.40 & 0.50 & 0.60 & 0.70 & 0.80 & 1.00 & 1.20 & '
             '1.50 & 1.70 & 2.00 & 2.50 & 3.00 & 3.50 & 4.00 & 5.00 & 6.00 & '
@@ -52,8 +44,8 @@ class DL2014(SedModule):
             "3.500, 4.000, 5.000, 6.000, 7.000, 8.000, 10.00, 12.00, 15.00, "
             "17.00, 20.00, 25.00, 30.00, 35.00, 40.00, 50.00.",
             1.0
-        )),
-        ('alpha', (
+        ),
+        'alpha': (
             'cigale_list(options=1.0 & 1.1 & 1.2 & 1.3 & 1.4 & 1.5 & 1.6 & '
             '1.7 & 1.8 & 1.9 & 2.0 & 2.1 & 2.2 & 2.3 & 2.4 & 2.5 & 2.6 & '
             '2.7 & 2.8 & 2.9 & 3.0)',
@@ -61,14 +53,14 @@ class DL2014(SedModule):
             "1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, "
             "2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0.",
             2.0
-        )),
-        ('gamma', (
+        ),
+        'gamma': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "Fraction illuminated from Umin to Umax. Possible values between "
             "0 and 1.",
             0.1
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         """Get the model out of the database"""
@@ -85,22 +77,22 @@ class DL2014(SedModule):
         self.umean = (1. - self.gamma) * self.umin
         if self.alpha == 1.0:
             self.umean += self.gamma * (self.umax - self.umin) / \
-                          np.log(self.umax / self.umin)
+                np.log(self.umax / self.umin)
         elif self.alpha == 2.0:
             self.umean += self.gamma * np.log(self.umax / self.umin) / \
-                          (1. / self.umin  - 1. / self.umax)
+                (1. / self.umin - 1. / self.umax)
         else:
             oma = 1. - self.alpha
             tma = 2. - self.alpha
             self.umean += self.gamma * oma / tma * \
-                          (self.umin**tma - self.umax**tma) / \
-                          (self.umin**oma - self.umax**oma)
+                (self.umin**tma - self.umax**tma) / \
+                (self.umin**oma - self.umax**oma)
 
-        with Database() as database:
-            self.model_minmin = database.get_dl2014(self.qpah, self.umin,
-                                                    self.umin, 1.)
-            self.model_minmax = database.get_dl2014(self.qpah, self.umin,
-                                                    self.umax, self.alpha)
+        with Database("dl2014") as db:
+            self.model_minmin = db.get(qpah=self.qpah, umin=self.umin,
+                                       umax=self.umin, alpha=1.)
+            self.model_minmax = db.get(qpah=self.qpah, umin=self.umin,
+                                       umax=self.umax, alpha=self.alpha)
 
         # The models in memory are in W/nm for 1 kg of dust. At the same time
         # we need to normalize them to 1 W here to easily scale them from the
@@ -109,14 +101,14 @@ class DL2014(SedModule):
         # mass in W (kg of dust)¯¹, The gamma parameter does not affect the
         # fact that it is for 1 kg because it represents a mass fraction of
         # each component.
-        self.emissivity = np.trapz((1.-self.gamma) * self.model_minmin.lumin +
-                                   self.gamma * self.model_minmax.lumin,
-                                   x=self.model_minmin.wave)
+        self.emissivity = np.trapz((1. - self.gamma) * self.model_minmin.spec +
+                                   self.gamma * self.model_minmax.spec,
+                                   x=self.model_minmin.wl)
 
         # We want to be able to display the respective contributions of both
         # components, therefore we keep they separately.
-        self.model_minmin.lumin *= (1. - self.gamma) / self.emissivity
-        self.model_minmax.lumin *= self.gamma / self.emissivity
+        self.model_minmin.spec *= (1. - self.gamma) / self.emissivity
+        self.model_minmax.spec *= self.gamma / self.emissivity
 
     def process(self, sed):
         """Add the IR re-emission contributions
@@ -141,10 +133,10 @@ class DL2014(SedModule):
         # emissivity in W/kg of dust.
         sed.add_info('dust.mass', luminosity / self.emissivity, True, unit='kg')
 
-        sed.add_contribution('dust.Umin_Umin', self.model_minmin.wave,
-                             luminosity * self.model_minmin.lumin)
-        sed.add_contribution('dust.Umin_Umax', self.model_minmax.wave,
-                             luminosity * self.model_minmax.lumin)
+        sed.add_contribution('dust.Umin_Umin', self.model_minmin.wl,
+                             luminosity * self.model_minmin.spec)
+        sed.add_contribution('dust.Umin_Umax', self.model_minmax.wl,
+                             luminosity * self.model_minmax.spec)
 
 
 # SedModule to be returned by get_module

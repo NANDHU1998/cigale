@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Copyright (C) 2015 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Alessandro Boselli, Yannick Roehlly
-
 """
 Physically motivated star formation history
 ===========================================
@@ -24,8 +18,6 @@ to 40 km/s as well as some intermediate values.
 
 """
 
-from collections import OrderedDict
-
 import numpy as np
 
 from . import SedModule
@@ -40,25 +32,25 @@ class SfhBuat08(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("velocity", (
+    parameter_list = {
+        "velocity": (
             "cigale_list(minvalue=40., maxvalue=360.)",
             "Rotational velocity of the galaxy in km/s. Must be between 40 "
             "and 360 (included).",
             200.
-        )),
-        ("age", (
+        ),
+        "age": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Age of the oldest stars in the galaxy. The precision "
             "is 1 Myr.",
             5000
-        )),
-        ("normalise", (
+        ),
+        "normalise": (
             "boolean()",
             "Normalise the SFH to produce one solar mass.",
             True
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         self.velocity = float(self.parameters["velocity"])
@@ -88,7 +80,7 @@ class SfhBuat08(SedModule):
         c = np.interp(self.velocity, paper_velocities, paper_cs)
 
         # Main SFR
-        t = (time_grid+1) / 1000  # The time is in Gyr in the formulae
+        t = (time_grid + 1) / 1000  # The time is in Gyr in the formulae
         self.sfr = 10.**(a + b * np.log10(t) + c * t**.5 - 9)
 
         # Compute the galaxy mass and normalise the SFH to 1 solar mass

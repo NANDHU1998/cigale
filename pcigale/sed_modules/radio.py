@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013 Institute of Astronomy, University of Cambridge
-# Copyright (C) 2014 University of Crete
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Laure Ciesla & Médéric Boquien
-
 """
 Radio module
 =============================
@@ -13,8 +6,6 @@ This module implements the synchrotron emission of galaxies assuming the
 FIR/radio correlation and the power law of the synchrotron spectrum.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 import scipy.constants as cst
@@ -29,33 +20,33 @@ class Radio(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("qir_sf", (
+    parameter_list = {
+        "qir_sf": (
             "cigale_list(minvalue=0.)",
             "The value of the FIR/radio correlation coefficient for star "
             "formation.",
             2.58
-        )),
-        ("alpha_sf", (
+        ),
+        "alpha_sf": (
             "cigale_list()",
             "The slope of the power-law synchrotron emission related to star "
             "formation, Lν∝ν^-α.",
             0.8
-        )),
-        ("R_agn", (
+        ),
+        "R_agn": (
             "cigale_list(minvalue=0.)",
             "The radio-loudness parameter for AGN, defined as "
             "R=Lν_5GHz/Lν_2500A, where Lν_2500A is the AGN 2500 Å intrinsic "
             "disk luminosity measured at viewing angle=30°.",
             0.
-        )),
-        ("alpha_agn", (
+        ),
+        "alpha_agn": (
             "cigale_list()",
             "The slope of the power-law AGN radio emission (assumed "
             "isotropic), Lν∝ν^-α.",
-            0.5
-        ))
-    ])
+            0.7
+        )
+    }
 
     def _init_code(self):
         """Build the model for a given set of parameters."""
@@ -73,23 +64,22 @@ class Radio(SedModule):
         self.wave = np.logspace(5., 9., 1000)
 
         # We compute the SF synchrotron emission normalised at 21cm
-        self.lumin_nonthermal_sf = (1./self.wave)**(-self.alpha_sf + 2.) / \
-                                   (1./2.1e8)**(-self.alpha_sf + 2.)
+        self.lumin_nonthermal_sf = (1. / self.wave)**(-self.alpha_sf + 2.) / \
+                                   (1. / 2.1e8)**(-self.alpha_sf + 2.)
 
         # Normalisation factor from the FIR/radio correlation to apply to the
         # IR luminosity
-        S21cm = (1. / (10.**self.qir_sf*3.75e12)) * (c/(2.1e8)**2)
+        S21cm = (1. / (10.**self.qir_sf * 3.75e12)) * (c / 2.1e8**2.)
         self.lumin_nonthermal_sf *= S21cm
 
         # We compute the AGN emission normalized at 5 GHz
-        self.lumin_agn = (1./self.wave)**(-self.alpha_agn + 2.) / \
-                         (5e9/c)**(-self.alpha_agn + 2.)
+        self.lumin_agn = (1. / self.wave)**(-self.alpha_agn + 2.) / \
+                         (5e9 / c)**(-self.alpha_agn + 2.)
 
         # Normalisation factor from the 2500 A-5 GHz relation to apply to the
         # AGN 2500 A Lnu
-        S5GHz = self.R_agn * 5e9**2/c
+        S5GHz = self.R_agn * 5e9**2. / c
         self.lumin_agn *= S5GHz
-
 
     def process(self, sed):
         """Add the radio contribution.

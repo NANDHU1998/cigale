@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Authors: Yannick Roehlly, Médéric Boquien
-
 import numpy as np
 from numpy.core.multiarray import interp  # Compiled version
 from scipy.constants import c, pi
@@ -310,7 +305,7 @@ def argsort_wl(wavelengths):
                       kind='mergesort')
 
 
-def interpolate_lumin(wl, lumin, wl_new, lumin_new):
+def interpolate_lumin(wl, lumin, wl_new, lumin_new, name_new):
     """
     Procedure to interpolate the luminosity components given the wavelengths
     grid and the luminosity of a new component.
@@ -342,37 +337,38 @@ def interpolate_lumin(wl, lumin, wl_new, lumin_new):
     # already know the answer.
     wl_unique = diff_wl(wl_new, wl)
 
-    # Output 2D array. We increase the number of components by one to include
-    # the new directly rather than vstack-ing later. We also increase the size
-    # to include possible new wavelengths
-    lumin_out = np.zeros((lumin.shape[0]+1, lumin.shape[1]+wl_unique.size))
-
     # If the new component has non already existing wavelengths then we
     # interpolate on these new wavelengths and only those ones. The first
     # lumin.shape[0] elements are the same as the input luminosity components.
     # We only carry out the interpolation of the new components. Finally, we
     # reorder the output array with increasing wavelength.
     if wl_unique.size > 0:
-        lumin_out[:-1, :lumin.shape[1]] = lumin
+        # Output 2D array so we interpolate all components at once.
+        lumin_out = np.zeros((len(lumin), wl.size + wl_unique.size))
+
+        for i, component in enumerate(lumin):
+            lumin_out[i, :wl.size] = lumin[component]
 
         # We interpolate only on the wavelengths where the components are
         # already defined.
         w = np.where((wl_unique > wl[0]) & (wl_unique < wl[-1]))
-        lumin_out[:-1, lumin.shape[1]+w[0]] = quick_interp_lum(wl_unique[w],
-                                                               wl, lumin)
+        lumin_out[:, wl.size + w[0]] = quick_interp_lum(wl_unique[w], wl,
+                                                        lumin_out)
 
         wl_best = np.concatenate((wl, wl_unique))
         s = argsort_wl(wl_best)
         wl_best = wl_best[s]
         lumin_out = np.take(lumin_out, s, axis=-1)
+        luminosities = {name: lumin_out[i, :] for i, name in enumerate(lumin)}
     else:
         wl_best = wl
-        lumin_out[:-1, :] = lumin
+        luminosities = lumin.copy()
 
     # We interpolate the new component on the new merged wavelength grid.
-    lumin_out[-1, :] = interp(wl_best, wl_new, lumin_new, left=0., right=0.)
+    luminosities[name_new] = interp(wl_best, wl_new, lumin_new, left=0.,
+                                    right=0.)
 
-    return (wl_best, lumin_out)
+    return (wl_best, luminosities)
 
 
 def flux_trapz(y, x, key):
@@ -409,7 +405,7 @@ def flux_trapz(y, x, key):
     else:
         dx = np.diff(x)
         dx_cache[key] = dx
-    return np.dot(dx, y[1:]+y[:-1]) * .5
+    return np.dot(dx, y[1:] + y[:-1]) * .5
 
 
 def quick_interp_lum(x_new, x, y):
@@ -443,7 +439,7 @@ def quick_interp_lum(x_new, x, y):
         hi = np.searchsorted(x, x_new)
         # Clip them so that they are at least 1.
         # Removes mis-interpolation of x_new[n] = x[0]
-        hi = hi.clip(1, len(x)-1).astype(int)
+        hi = hi.clip(1, len(x) - 1).astype(int)
         lo = hi - 1
         frac_x = (x_new - x[lo]) / (x[hi] - x[lo])
         x_cache[key] = (lo, hi, frac_x)

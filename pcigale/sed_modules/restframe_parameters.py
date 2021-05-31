@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2015 Laboratoire d'Astrophysique de Marseille
-# Copyright (C) 2016 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien & Denis Burgarella
-
 """
 Module that estimates other parameters, e.g., UV slope, Lick indices, etc.
 ==========================================================================
@@ -18,7 +12,6 @@ the observed frame. For that use the param_postz module.
 
 """
 
-from collections import OrderedDict
 from itertools import chain
 
 import numpy as np
@@ -36,44 +29,44 @@ class RestframeParam(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("beta_calz94", (
+    parameter_list = {
+        "beta_calz94": (
             "boolean()",
             "UV slope measured in the same way as in Calzetti et al. (1994).",
             False
-        )),
-        ("D4000", (
+        ),
+        "D4000": (
             "boolean()",
             "D4000 break using the Balogh et al. (1999) definition.",
             False
-        )),
-        ("IRX", (
+        ),
+        "IRX": (
             "boolean()",
             "IRX computed from the GALEX FUV filter and the dust luminosity.",
             False
-        )),
-        ("EW_lines", (
+        ),
+        "EW_lines": (
             "string()",
             "Central wavelength of the emission lines for which to compute "
             "the equivalent width. The half-bandwidth must be indicated "
             "after the '/' sign. For instance 656.3/1.0 means oth the nebular "
             "line and the continuum are integrated over 655.3-657.3 nm.",
             "500.7/1.0 & 656.3/1.0"
-        )),
-        ("luminosity_filters", (
+        ),
+        "luminosity_filters": (
             "string()",
             "Filters for which the rest-frame luminosity will be computed. "
             "You can give several filter names separated by a & (don't use "
             "commas).",
             "FUV & V_B90"
-        )),
-        ("colours_filters", (
+        ),
+        "colours_filters": (
             "string()",
             "Rest-frame colours to be computed. You can give several colours "
             "separated by a & (don't use commas).",
             "FUV-NUV & NUV-r_prime"
-        ))
-    ])
+        )
+    }
 
     def calz94(self, sed):
         wl = sed.wavelength_grid
@@ -139,13 +132,13 @@ class RestframeParam(SedModule):
         if key in self.w_lines:
             w_lines = self.w_lines[key]
         else:
-            w_lines = {line: np.where((wl >= line[0]-line[1]) &
-                                      (wl <= line[0]+line[1]))
+            w_lines = {line: np.where((wl >= line[0] - line[1]) &
+                                      (wl <= line[0] + line[1]))
                        for line in self.lines}
             self.w_lines[key] = w_lines
 
-        lumin_line = np.sum([sed.get_lumin_contribution(name)
-                             for name in sed.contribution_names
+        lumin_line = np.sum([sed.luminosities[name]
+                             for name in sed.luminosities
                              if 'nebular.lines' in name], axis=0)
         lumin_cont = sed.luminosity - lumin_line
 
@@ -156,7 +149,7 @@ class RestframeParam(SedModule):
             key = (wl_line.size, sed.info['nebular.lines_width'], line[0], 0.)
             EW[line] = (flux_trapz(lumin_line[w_line], wl_line, key) /
                         flux_trapz(lumin_cont[w_line], wl_line, key) *
-                        (wl_line[-1]-wl_line[0]))
+                        (wl_line[-1] - wl_line[0]))
 
         return EW
 
@@ -218,16 +211,16 @@ class RestframeParam(SedModule):
             sed.add_info("param.IRX", np.log10(sed.info['dust.luminosity'] /
                          (fluxes['FUV'] * self.to_lumin * c / 154e-9)))
 
-        if 'nebular.lines_young' in sed.contribution_names:
+        if 'nebular.lines_young' in sed.luminosities:
             for line, EW in self.EW(sed).items():
                 sed.add_info(f"param.EW({line[0]}/{line[1]})", EW, unit='nm')
 
         for filt in self.lumin_filters:
             sed.add_info(f"param.restframe_Lnu({filt})",
-                         fluxes[filt] * self.to_lumin, True, unit='W')
+                         fluxes[filt] * self.to_lumin, True, unit='W/Hz')
         for filt1, filt2 in self.colours:
             sed.add_info(f"param.restframe_{filt1}-{filt2}",
-                         2.5 * np.log10(fluxes[filt2]/fluxes[filt1]),
+                         2.5 * np.log10(fluxes[filt2] / fluxes[filt1]),
                          unit='mag')
 
 

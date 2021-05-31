@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Department of Physics, University of Crete
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Laure Ciesla
-
 """
 Dale et al. (2014) IR models module
 ===================================
@@ -11,9 +6,7 @@ This module implements the Dale (2014) infra-red models.
 
 """
 
-from collections import OrderedDict
-
-from pcigale.data import Database
+from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
 
@@ -29,14 +22,14 @@ class Dale2014(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ('fracAGN', (
+    parameter_list = {
+        'fracAGN': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "AGN fraction. It is not recommended to combine this AGN emission "
-            "with the of Fritz et al. (2006) models.",
+            "with the of Fritz et al. (2006) or SKIRTOR models.",
             0.0
-        )),
-        ('alpha', (
+        ),
+        'alpha': (
             "cigale_list(options=0.0625 & 0.1250 & 0.1875 & 0.2500 & 0.3125 & "
             "0.3750 & 0.4375 & 0.5000 & 0.5625 & 0.6250 & 0.6875 & 0.7500 & "
             "0.8125 & 0.8750 & 0.9375 & 1.0000 & 1.0625 & 1.1250 & 1.1875 & "
@@ -57,8 +50,8 @@ class Dale2014(SedModule):
             "3.2500, 3.3125, 3.3750, 3.4375, 3.5000, 3.5625, 3.6250, 3.6875, "
             "3.7500, 3.8125, 3.8750, 3.9375, 4.0000",
             2.
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         """
@@ -72,9 +65,9 @@ class Dale2014(SedModule):
         self.fracAGN = float(self.parameters["fracAGN"])
         self.alpha = float(self.parameters["alpha"])
 
-        with Database() as database:
-            self.model_sb = database.get_dale2014(0.00, self.alpha)
-            self.model_quasar = database.get_dale2014(1.00, 0.0)
+        with Database("dale2014") as db:
+            self.model_sb = db.get(fracAGN=0.0, alpha=self.alpha)
+            self.model_quasar = db.get(fracAGN=1.0, alpha=0.0)
 
     def process(self, sed):
         """Add the IR re-emission contributions
@@ -90,7 +83,7 @@ class Dale2014(SedModule):
         luminosity = sed.info['dust.luminosity']
 
         if self.fracAGN < 1.:
-            L_AGN = luminosity * (1./(1.-self.fracAGN) - 1.)
+            L_AGN = luminosity * (1. / (1. - self.fracAGN) - 1.)
         else:
             raise Exception("AGN fraction is exactly 1. Behaviour undefined.")
 
@@ -98,11 +91,11 @@ class Dale2014(SedModule):
         sed.add_info("agn.fracAGN_dale2014", self.fracAGN)
         sed.add_info("dust.alpha", self.alpha)
 
-        sed.add_contribution('dust', self.model_sb.wave,
-                             luminosity * self.model_sb.lumin)
+        sed.add_contribution('dust', self.model_sb.wl,
+                             luminosity * self.model_sb.spec)
         if self.fracAGN != 0.:
-            sed.add_contribution('agn', self.model_quasar.wave,
-                                 L_AGN * self.model_quasar.lumin)
+            sed.add_contribution('agn', self.model_quasar.wl,
+                                 L_AGN * self.model_quasar.spec)
 
 
 # SedModule to be returned by get_module

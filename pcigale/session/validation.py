@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2016 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 from collections import Iterable
 import numpy as np
 import validate as vdt
@@ -65,7 +60,7 @@ def is_cigale_list(inobject, dtype='float', minvalue=None, maxvalue=None,
                 outobject = [outobject]
         elif inobject.startswith('range '):
             start, stop, step = [conv_type(item) for item in inobject[5:].split()]
-            outobject = np.arange(start, stop+step, step)
+            outobject = np.arange(start, stop + step, step)
         else:
             # We need to return a list to combine the list of possible values
             # for each parameter.

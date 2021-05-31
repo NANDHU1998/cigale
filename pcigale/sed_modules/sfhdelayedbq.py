@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Copyright (C) 2014 University of Cambridge
-# Copyright (C) 2018 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-
 """
 Delayed tau model for star formation history with an optional burst/quench
 ==========================================================================
@@ -15,8 +8,6 @@ a quenching or a bursting episode can be added. It is described in more detail
 in Ciesla et al. (2017).
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 
@@ -35,40 +26,40 @@ class SFHDelayedBQ(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("tau_main", (
+    parameter_list = {
+        "tau_main": (
             "cigale_list()",
             "e-folding time of the main stellar population model in Myr.",
             2000.
-        )),
-        ("age_main", (
+        ),
+        "age_main": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Age of the main stellar population in the galaxy in Myr. The "
             "precision is 1 Myr.",
             5000
-        )),
-        ("age_bq", (
+        ),
+        "age_bq": (
             "cigale_list(dtype=int)",
             "Age of the burst/quench episode. The precision is 1 Myr.",
             500.
-        )),
-        ("r_sfr", (
+        ),
+        "r_sfr": (
             "cigale_list(minvalue=0.)",
             "Ratio of the SFR after/before age_bq.",
             0.1
-        )),
-        ("sfr_A", (
+        ),
+        "sfr_A": (
             "cigale_list(minvalue=0.)",
             "Multiplicative factor controlling the SFR if normalise is False. "
             "For instance without any burst/quench: SFR(t)=sfr_A×t×exp(-t/τ)/τ²",
             1.
-        )),
-        ("normalise", (
+        ),
+        "normalise": (
             "boolean()",
             "Normalise the SFH to produce one solar mass.",
             True
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         self.tau_main = float(self.parameters["tau_main"])
@@ -87,7 +78,7 @@ class SFHDelayedBQ(SedModule):
 
         # Add the burst/quench
         t_bq = self.age_main - self.age_bq
-        self.sfr[t>=t_bq] = self.r_sfr * self.sfr[t_bq-1]
+        self.sfr[t >= t_bq] = self.r_sfr * self.sfr[t_bq - 1]
 
         # Compute the galaxy mass and normalise the SFH to 1 solar mass
         # produced if asked to.
@@ -98,7 +89,6 @@ class SFHDelayedBQ(SedModule):
         else:
             self.sfr *= sfr_A
             self.sfr_integrated *= sfr_A
-
 
     def process(self, sed):
         """
@@ -118,6 +108,7 @@ class SFHDelayedBQ(SedModule):
         sed.add_info("sfh.tau_main", self.tau_main, unit='Myr')
         sed.add_info("sfh.age_bq", self.age_bq, unit='Myr')
         sed.add_info("sfh.r_sfr", self.r_sfr)
+
 
 # CreationModule to be returned by get_module
 Module = SFHDelayedBQ

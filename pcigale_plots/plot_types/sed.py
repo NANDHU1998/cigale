@@ -1,13 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013-2014 Yannick Roehlly
-# Copyright (C) 2013 Institute of Astronomy
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly, Médéric Boquien & Denis Burgarella
-
 from itertools import repeat
-from collections import OrderedDict
 
 from astropy.table import Table
 import matplotlib
@@ -16,10 +7,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import numpy as np
-from os import path
 import pkg_resources
 from scipy.constants import c
-from pcigale.data import Database
+from pcigale.data import SimpleDatabase as Database
 from utils.io import read_table
 import matplotlib.gridspec as gridspec
 from utils.counter import Counter
@@ -53,14 +43,13 @@ def pool_initializer(counter):
 def sed(config, sed_type, nologo, xrange, yrange, series, format, outdir):
     """Plot the best SED with associated observed and modelled fluxes.
     """
-    obs = read_table(path.join(path.dirname(outdir),
-                               config.configuration['data_file']))
-    mod = Table.read(path.join(outdir, BEST_RESULTS))
+    obs = read_table(outdir.parent / config.configuration['data_file'])
+    mod = Table.read(outdir / BEST_RESULTS)
 
-    with Database() as base:
-        filters = OrderedDict([(name, base.get_filter(name))
-                               for name in config.configuration['bands']
-                               if not (name.endswith('_err') or name.startswith('line'))])
+    with Database("filters") as db:
+        filters = {name: db.get(name=name)
+                   for name in config.configuration['bands']
+                   if not (name.endswith('_err') or name.startswith('line'))}
 
     if nologo is True:
         logo = False
@@ -90,7 +79,7 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
         Data from the input file regarding one object.
     mod: Table row
         Data from the best model of one object.
-    filters: ordered dictionary of Filter objects
+    filters: dict
         The observed fluxes in each filter.
     sed_type: string
         Type of SED to plot. It can either be "mJy" (flux in mJy and observed
@@ -106,25 +95,25 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
     series: list
     format: string
         One of png, pdf, ps, eps or svg.
-    outdir: string
-        The absolute path to outdir
+    outdir: Path
+        Path to outdir
 
     """
     np.seterr(invalid='ignore')
     gbl_counter.inc()
 
-    id_best_model_file = path.join(outdir, f"{obs['id']}_best_model.fits")
-    if path.isfile(id_best_model_file):
+    id_best_model_file = outdir / f"{obs['id']}_best_model.fits"
+    if id_best_model_file.is_file():
         sed = Table.read(id_best_model_file)
 
-        filters_wl = np.array([filt.pivot_wavelength
+        filters_wl = np.array([filt.pivot
                                for filt in filters.values()]) * 1e-3
         wavelength_spec = sed['wavelength'] * 1e-3
         obs_fluxes = np.array([obs[filt] for filt in filters.keys()])
-        obs_fluxes_err = np.array([obs[filt+'_err']
+        obs_fluxes_err = np.array([obs[filt + '_err']
                                    for filt in filters.keys()])
-        mod_fluxes = np.array([mod["best."+filt]
-                               if "best."+filt in mod.colnames else np.nan
+        mod_fluxes = np.array([mod["best." + filt]
+                               if "best." + filt in mod.colnames else np.nan
                                for filt in filters.keys()])
         if obs['redshift'] >= 0:
             z = float(obs['redshift'])
@@ -167,7 +156,7 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
 
             # Stellar emission
             if ('stellar_attenuated' in series
-                and 'stellar.young' in sed.columns):
+                    and 'stellar.young' in sed.columns):
                 spectrum = (sed['stellar.young'][wsed] +
                             sed['stellar.old'][wsed])
 
@@ -185,7 +174,7 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
                            linewidth=1.0)
 
             if ('stellar_unattenuated' in series
-                and 'stellar.young' in sed.columns):
+                    and 'stellar.young' in sed.columns):
                 ax1.loglog(wavelength_spec[wsed],
                            (sed['stellar.old'][wsed] +
                             sed['stellar.young'][wsed]),
@@ -246,10 +235,10 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
                            linewidth=1.0)
 
             # Radio emission
-            if 'radio' in series and 'radio_nonthermal' in sed.columns:
+            if 'radio' in series and 'radio.sf_nonthermal' in sed.columns:
                 ax1.loglog(wavelength_spec[wsed],
-                           sed['radio_nonthermal'][wsed],
-                           label="Radio nonthermal", color='brown',
+                           sed['radio.sf_nonthermal'][wsed],
+                           label="Radio SF nonthermal", color='brown',
                            marker=None, nonpositive='clip', linestyle='-',
                            linewidth=1.0)
 
@@ -291,8 +280,8 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
                              label='Observed fluxes, no errors', capsize=0.)
             mask = np.where(obs_fluxes > 0.)
             ax2.errorbar(filters_wl[mask],
-                         (obs_fluxes[mask]-mod_fluxes[mask])/obs_fluxes[mask],
-                         yerr=obs_fluxes_err[mask]/obs_fluxes[mask],
+                         (obs_fluxes[mask] - mod_fluxes[mask]) / obs_fluxes[mask],
+                         yerr=obs_fluxes_err[mask] / obs_fluxes[mask],
                          marker='_', label="(Obs-Mod)/Obs", color='k',
                          capsize=0., ls='None', lw=1)
             ax2.plot([xmin, xmax], [0., 0.], ls='--', color='k')
@@ -361,11 +350,10 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
                 # Multiplying the dpi by 2 is a hack so the figure is small
                 # and not too pixelated
                 figwidth = figure.get_figwidth() * figure.dpi * 2.
-                figure.figimage(logo, figwidth-logo.shape[0], 0,
+                figure.figimage(logo, figwidth - logo.shape[0], 0,
                                 origin='upper', zorder=0, alpha=1)
 
-            figure.savefig(path.join(outdir,
-                                     f"{obs['id']}_best_model.{format}"),
+            figure.savefig(outdir / f"{obs['id']}_best_model.{format}",
                            dpi=figure.dpi * 2.)
             plt.close(figure)
         else:

@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013 Institute of Astronomy, University of Cambridge
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 """
 Casey (2012) IR models module
 =============================
@@ -11,8 +5,6 @@ Casey (2012) IR models module
 This module implements the Casey (2012) infra-red models.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 import scipy.constants as cst
@@ -29,23 +21,23 @@ class Casey2012(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("temperature", (
+    parameter_list = {
+        "temperature": (
             "cigale_list(minvalue=0.)",
             "Temperature of the dust in K.",
             35.
-        )),
-        ("beta", (
+        ),
+        "beta": (
             "cigale_list(minvalue=0.)",
             "Emissivity index of the dust.",
             1.6
-        )),
-        ("alpha", (
+        ),
+        "alpha": (
             "cigale_list(minvalue=0.)",
             "Mid-infrared powerlaw slope.",
             2.
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         """Build the model for a given set of parameters."""
@@ -73,7 +65,7 @@ class Casey2012(SedModule):
 
         self.lumin_blackbody = (conv * (1. - np.exp(-(lambda_0 / self.wave)
                                 ** beta)) * (c / self.wave) ** 3. / (np.exp(
-                                cst.h * c / (self.wave * cst.k * T)) - 1.))
+                                    cst.h * c / (self.wave * cst.k * T)) - 1.))
         self.lumin_powerlaw = (conv * Npl * (self.wave / lambda_c) ** alpha *
                                np.exp(-(self.wave / lambda_c) ** 2.))
 

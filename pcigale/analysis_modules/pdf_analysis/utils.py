@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013-2014 Institute of Astronomy
-# Copyright (C) 2014 Yannick Roehlly <yannick@iaora.eu>
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly & Médéric Boquien
-
 from functools import lru_cache
+from pathlib import Path
 
 from astropy import log
 from ...utils.cosmology import luminosity_distance
 import numpy as np
 from scipy import optimize
-from scipy.constants import parsec
 from scipy.special import erf
 
 log.setLevel('ERROR')
@@ -21,8 +14,8 @@ def save_chi2(obs, variable, models, chi2, values):
     """Save the chi² and the associated physocal properties
 
     """
-    fname = f"out/{obs.id}_{variable.replace('/', '_')}_chi2-block-" \
-            f"{models.iblock}.npy"
+    fname = Path('out') / f"{obs.id}_{variable.replace('/', '_')}_chi2-block-" \
+        f"{models.iblock}.npy"
     data = np.memmap(fname, dtype=np.float64, mode='w+',
                      shape=(2, chi2.size))
     data[0, :] = chi2
@@ -88,15 +81,16 @@ def dchi2_over_ds2(s, obsdata, obsdata_err, obslim, obslim_err, moddata,
     # i.e., when obs_fluxes is >=0. and obs_errors >=0.
     # The mask "lim" selects the filter(s) for which upper limits are given
     # i.e., when obs_errors < 0
-    dchi2_over_ds_data = np.sum((obsdata-s*moddata) * moddata/obsdata_err**2.)
+    sqrt2 = np.sqrt(2)
+    dchi2_over_ds_data = np.sum((obsdata - s * moddata) *
+                                moddata / obsdata_err**2.)
 
-    dchi2_over_ds_lim = np.sqrt(2./np.pi) * np.sum(
-        modlim*np.exp(
-            -np.square((obslim - s*modlim)/(np.sqrt(2)*obslim_err))
-                     )/(
-            obslim_err*(1. + erf((obslim - s*modlim)/(np.sqrt(2)*obslim_err)))
-                       )
-                                                  )
+    dchi2_over_ds_lim = np.sqrt(2. / np.pi) * np.sum(
+        modlim * np.exp(
+            -np.square((obslim - s * modlim) / (sqrt2 * obslim_err))
+        ) / (
+            obslim_err * (1. + erf((obslim - s * modlim) / (sqrt2 * obslim_err)))
+        ))
     func = dchi2_over_ds_data - dchi2_over_ds_lim
 
     return func
@@ -148,7 +142,7 @@ def _compute_scaling(models, obs, corr_dz, wz):
         num += model * (prop * inv_err2 * corr_dz)
         denom += model ** 2. * (inv_err2 * corr_dz ** 2.)
 
-    return num/denom
+    return num / denom
 
 
 def _correct_scaling_ul(scaling, mod, obs, wz):
@@ -273,12 +267,12 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
             model = models.flux[band][wz]
             chi2 -= 2. * np.log(.5 *
                                 (1. + erf(((obs.flux_ul[band] -
-                                 model * scaling) / (np.sqrt(2.)*obs_error)))))
+                                 model * scaling) / (np.sqrt(2.) * obs_error)))))
         for band, obs_error in obs.extprop_ul_err.items():
             model = models.extprop[band][wz]
             chi2 -= 2. * np.log(.5 *
                                 (1. + erf(((obs.extprop_ul[band] -
-                                 model * scaling) / (np.sqrt(2.)*obs_error)))))
+                                 model * scaling) / (np.sqrt(2.) * obs_error)))))
 
     return chi2, scaling
 

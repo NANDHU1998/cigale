@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille, AMU
-# Copyright (C) 2012, 2014 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly & Denis Burgarella
-
 from datetime import datetime
 from importlib import import_module
-import os
+from pathlib import Path
 import shutil
 
 
-class AnalysisModule(object):
+class AnalysisModule:
     """Abstract class, the pCigale analysis modules are based on.
     """
 
@@ -50,15 +44,15 @@ class AnalysisModule(object):
         raise NotImplementedError()
 
     def prepare_dirs(self):
-        # Create a new out/ directory and move existing one if needed
-        if os.path.exists('out/'):
-            name = datetime.now().strftime("%Y%m%d_%H%M%S") + '_out/'
-            os.rename('out/', name)
-            print(f"The out/ directory was renamed to {name}")
+        # Create a new out directory and move existing one if needed
+        out = Path('out')
+        if out.is_dir():
+            old = out.rename(f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_out")
+            print(f"The {out.name} directory was renamed to {old.name}")
 
-        os.mkdir('out/')
-        shutil.copy('pcigale.ini', 'out/')
-        shutil.copy('pcigale.ini.spec', 'out/')
+        out.mkdir()
+        shutil.copy('pcigale.ini', out)
+        shutil.copy('pcigale.ini.spec', out)
 
     def process(self, configuration):
         """Process with the analysis

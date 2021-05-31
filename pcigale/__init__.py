@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 import os
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
@@ -14,6 +9,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 import argparse
 import multiprocessing as mp
+from pathlib import Path
 import sys
 
 from .session.configuration import Configuration
@@ -62,9 +58,9 @@ def run(config):
 
 
 def main():
-    if sys.version_info[:2] < (3, 6):
+    if sys.version_info[:2] < (3, 8):
         raise Exception(f"Python {sys.version_info[0]}.{sys.version_info[1]} is"
-                        f" unsupported. Please upgrade to Python 3.6 or later.")
+                        f" unsupported. Please upgrade to Python 3.8 or later.")
 
     # We set the sub processes start method to spawn because it solves
     # deadlocks when a library cannot handle being used on two sides of a
@@ -101,7 +97,7 @@ def main():
         args = parser.parse_args()
 
         if args.config_file:
-            config = Configuration(args.config_file)
+            config = Configuration(Path(args.config_file))
         else:
             config = Configuration()
 

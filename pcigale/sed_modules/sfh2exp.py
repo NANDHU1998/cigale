@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 Double decreasing exponential star formation history module
 ===========================================================
@@ -11,8 +6,6 @@ This module implements a star formation history (SFH) composed of two
 decreasing exponentials.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 
@@ -27,44 +20,44 @@ class Sfh2Exp(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("tau_main", (
+    parameter_list = {
+        "tau_main": (
             "cigale_list()",
             "e-folding time of the main stellar population model in Myr.",
             6000.
-        )),
-        ("tau_burst", (
+        ),
+        "tau_burst": (
             "cigale_list()",
             "e-folding time of the late starburst population model in Myr.",
             50.
-        )),
-        ("f_burst", (
+        ),
+        "f_burst": (
             "cigale_list(minvalue=0., maxvalue=0.9999)",
             "Mass fraction of the late burst population.",
             0.01
-        )),
-        ("age", (
+        ),
+        "age": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Age of the main stellar population in the galaxy in Myr. The "
             "precision is 1 Myr.",
             5000
-        )),
-        ("burst_age", (
+        ),
+        "burst_age": (
             "cigale_list(dtype=int, minvalue=1.)",
             "Age of the late burst in Myr. The precision is 1 Myr.",
             20
-        )),
-        ("sfr_0", (
+        ),
+        "sfr_0": (
             "cigale_list(minvalue=0.)",
             "Value of SFR at t = 0 in M_sun/yr.",
             1.
-        )),
-        ("normalise", (
+        ),
+        "normalise": (
             "boolean()",
             "Normalise the SFH to produce one solar mass.",
             True
-        )),
-    ])
+        )
+    }
 
     def _init_code(self):
         self.tau_main = float(self.parameters["tau_main"])
@@ -87,12 +80,12 @@ class Sfh2Exp(SedModule):
         sfr_burst = np.exp(-time_grid_burst / self.tau_burst)
 
         # Height of the late burst to have the desired produced mass fraction
-        sfr_burst *= (self.f_burst / (1.-self.f_burst) * np.sum(self.sfr) /
+        sfr_burst *= (self.f_burst / (1. - self.f_burst) * np.sum(self.sfr) /
                       np.sum(sfr_burst))
 
         # We add the age burst exponential for ages superior to age -
         # burst_age
-        self.sfr[-(time_grid_burst[-1]+1):] += sfr_burst
+        self.sfr[-(time_grid_burst[-1] + 1):] += sfr_burst
 
         # Compute the galaxy mass and normalise the SFH to 1 solar mass
         # produced if asked to.

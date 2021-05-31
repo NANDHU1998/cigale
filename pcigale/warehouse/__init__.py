@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 from ..sed import SED
 from .. import sed_modules
 from .sedcache import SedCache
 
 
-class SedWarehouse(object):
+class SedWarehouse:
     """Create, cache and store SED
 
     This object is responsible for creating SED and storing them in a memory

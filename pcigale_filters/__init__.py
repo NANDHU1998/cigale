@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2015 Institute of Astronomy
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 import argparse
 import multiprocessing as mp
 import sys
@@ -11,23 +6,24 @@ from astropy.table import Table, Column
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.constants as cst
 
-from pcigale.data import Database, Filter
+from pcigale.data import SimpleDatabase as Database
 
 
 def list_filters():
     """Print the list of filters in the pcigale database.
     """
-    with Database() as base:
-        filters = {name: base.get_filter(name) for name in
-                   base.get_filter_names()}
+    with Database("filters") as base:
+        filters = {name: base.get(name=name) for name in
+                   base.parameters["name"]}
 
     name = Column(data=[filters[f].name for f in filters], name='Name')
-    description = Column(data=[filters[f].description for f in filters],
+    description = Column(data=[filters[f].desc for f in filters],
                          name='Description')
-    wl = Column(data=[filters[f].pivot_wavelength for f in filters],
+    wl = Column(data=[filters[f].pivot for f in filters],
                 name='Pivot Wavelength', unit=u.nm, format='%d')
-    samples = Column(data=[filters[f].trans_table[0].size for f in filters],
+    samples = Column(data=[filters[f].wl.size for f in filters],
                      name="Points")
 
     t = Table()
@@ -39,57 +35,43 @@ def list_filters():
 def add_filters(fnames):
     """Add filters to the pcigale database.
     """
-    with Database(writable=True) as base:
-        for fname in fnames:
-            with open(fname, 'r') as f_fname:
-                filter_name = f_fname.readline().strip('# \n\t')
-                filter_type = f_fname.readline().strip('# \n\t')
-                filter_description = f_fname.readline().strip('# \n\t')
-            filter_table = np.genfromtxt(fname)
-            # The table is transposed to have table[0] containing the
-            # wavelength and table[1] containing the transmission.
-            filter_table = filter_table.transpose()
+    db = Database("filters", writable=True)
 
-            # We convert the wavelength from Å to nm.
-            filter_table[0] *= 0.1
+    for fname in fnames:
+        with open(fname, 'r') as f:
+            name = f.readline().strip('# \n\t')
+            type_ = f.readline().strip('# \n\t')
+            desc = f.readline().strip('# \n\t')
+        wl, tr = np.genfromtxt(fname, unpack=True)
 
-            # We convert to energy if needed
-            if filter_type == 'photon':
-                filter_table[1] *= filter_table[0]
-            elif filter_type != 'energy':
-                raise ValueError("Filter transmission type can only be "
-                                 "'energy' or 'photon'.")
+        # We convert the wavelength from Å to nm.
+        wl *= 0.1
 
-            print(f"Importing {filter_name}... "
-                  f"({filter_table.shape[1]} points)")
+        # We convert to energy if needed
+        if type_ == 'photon':
+            tr *= wl
+        elif type_ != 'energy':
+            raise ValueError("Filter transmission type can only be "
+                             "'energy' or 'photon'.")
 
-            new_filter = Filter(filter_name, filter_description, filter_table)
+        print(f"Importing {name}... ({wl.size} points)")
 
-            # We normalise the filter and compute the pivot wavelength. If the
-            # filter is a pseudo-filter used to compute line fluxes, it should
-            # not be normalised.
-            if not (filter_name.startswith('PSEUDO') or
-                    filter_name.startswith('linefilter.')):
-                new_filter.normalise()
-            else:
-                new_filter.pivot_wavelength = np.mean(
-                    filter_table[0][filter_table[1] > 0]
-                )
+        # We normalise the filter and compute the pivot wavelength. If the
+        # filter is a pseudo-filter used to compute line fluxes, it should not
+        # be normalised.
+        if not name.startswith('PSEUDO'):
+            pivot = np.sqrt(np.trapz(tr, wl) / np.trapz(tr / wl*2, wl))
 
-            base.add_filter(new_filter)
+            # The factor 10²⁰ is so that we get the fluxes directly in mJy when
+            # we integrate with the wavelength in units of nm and the spectrum
+            # in units of W/m²/nm.
+            tr *= 1e20 / (cst.c * np.trapz(tr / wl**2, wl))
+        else:
+            pivot = np.mean(wl[tr > 0.])
 
-
-def del_filters(fnames):
-    """Delete filters from the pcigale database
-    """
-    with Database(writable=True) as base:
-        names = base.get_filter_names()
-        for fname in fnames:
-            if fname in names:
-                base.del_filter(fname)
-                print(f"Removing filter {fname}")
-            else:
-                print("Filter {fname} not in the database")
+        db.add({"name": name},
+               {"wl": wl, "tr": tr, "pivot": pivot, "desc": desc})
+    db.close()
 
 
 def worker_plot(fname):
@@ -100,13 +82,28 @@ def worker_plot(fname):
     fname: string
         Name of the filter to be plotted
     """
-    with Database() as base:
-        _filter = base.get_filter(fname)
+    with Database("filters") as db:
+        _filter = db.get(name=fname)
+
+    if _filter.pivot >= 1e3 and _filter.pivot < 1e6:
+        _filter.wl *= 1e-3
+        unit = "μm"
+    elif _filter.pivot >= 1e6 and _filter.pivot < 1e7:
+        _filter.wl *= 1e-6
+        unit = "mm"
+    elif _filter.pivot >= 1e7:
+        _filter.wl *= 1e-7
+        unit = "cm"
+    else:
+        unit = "nm"
+
+    _filter.tr *= 1. / np.max(_filter.tr)
+
     plt.clf()
-    plt.plot(_filter.trans_table[0], _filter.trans_table[1], color='k')
-    plt.xlim(_filter.trans_table[0][0], _filter.trans_table[0][-1])
+    plt.plot(_filter.wl, _filter.tr, color='k')
+    plt.xlim(_filter.wl[0], _filter.wl[-1])
     plt.minorticks_on()
-    plt.xlabel('Wavelength [nm]')
+    plt.xlabel(f'Wavelength [{unit}]')
     plt.ylabel('Relative transmission')
     plt.title(f"{fname} filter")
     plt.tight_layout()
@@ -118,8 +115,8 @@ def plot_filters(fnames):
     plot all the filters.
     """
     if len(fnames) == 0:
-        with Database() as base:
-            fnames = base.get_filter_names()
+        with Database("filters") as db:
+            fnames = db.parameters["name"]
     with mp.Pool(processes=mp.cpu_count()) as pool:
         pool.map(worker_plot, fnames)
 
@@ -143,10 +140,6 @@ def main():
     add_parser.add_argument('names', nargs='+', help="List of file names")
     add_parser.set_defaults(parser='add')
 
-    del_parser = subparsers.add_parser('del', help=del_filters.__doc__)
-    del_parser.add_argument('names', nargs='+', help="List of filter names")
-    del_parser.set_defaults(parser='del')
-
     plot_parser = subparsers.add_parser('plot', help=plot_filters.__doc__)
     plot_parser.add_argument('names', nargs='*', help="List of filter names")
     plot_parser.set_defaults(parser='plot')
@@ -159,7 +152,5 @@ def main():
             list_filters()
         elif args.parser == 'add':
             add_filters(args.names)
-        elif args.parser == 'del':
-            del_filters(args.names)
         elif args.parser == 'plot':
             plot_filters(args.names)

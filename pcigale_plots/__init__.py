@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013-2014 Yannick Roehlly
-# Copyright (C) 2013 Institute of Astronomy
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly, Médéric Boquien & Denis Burgarella
-
 import os
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
@@ -17,8 +9,8 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 import argparse
 import sys
-from os import path
 import multiprocessing as mp
+from pathlib import Path
 
 from pcigale.session.configuration import Configuration
 from .plot_types.chi2 import chi2 as chi2_action
@@ -74,9 +66,9 @@ def main():
 
     sed_parser = subparsers.add_parser('sed', help=sed_action.__doc__)
     sed_parser.add_argument('--type', default='mJy',
-                             help='type of plot. Options are mJy (observed '
-                                  'frame in flux) and lum (rest-frame in '
-                                  'lumunosity).')
+                            help='type of plot. Options are mJy (observed '
+                                 'frame in flux) and lum (rest-frame in '
+                                 'lumunosity).')
     sed_parser.add_argument('--nologo', action='store_true')
     sed_parser.add_argument('--format', default='pdf', help=fmtstr)
     sed_parser.add_argument('--outdir', default='out')
@@ -100,12 +92,12 @@ def main():
     mock_parser.set_defaults(parser='mock')
 
     args = parser.parse_args()
-    outdir = path.abspath(args.outdir)
+    outdir = Path(args.outdir)
 
     if args.config_file:
-        config = Configuration(args.config_file)
+        config = Configuration(Path(args.config_file))
     else:
-        config = Configuration(path.join(path.dirname(outdir), 'pcigale.ini'))
+        config = Configuration(outdir / 'pcigale.ini')
 
     if len(sys.argv) == 1:
         parser.print_usage()

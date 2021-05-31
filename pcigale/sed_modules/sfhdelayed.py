@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2014, 2016 Laboratoire d'Astrophysique de Marseille
-# Copyright (C) 2014 University of Cambridge
-# Copyright (C) 2018 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-
 """
 Delayed tau model for star formation history with an optional exponential burst
 ===============================================================================
@@ -15,8 +8,6 @@ a decreasing exponential burst can be added to model a recent episode of star
 formation.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 
@@ -34,45 +25,45 @@ class SFHDelayed(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("tau_main", (
+    parameter_list = {
+        "tau_main": (
             "cigale_list()",
             "e-folding time of the main stellar population model in Myr.",
             2000.
-        )),
-        ("age_main", (
+        ),
+        "age_main": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Age of the main stellar population in the galaxy in Myr. The "
             "precision is 1 Myr.",
             5000
-        )),
-        ("tau_burst", (
+        ),
+        "tau_burst": (
             "cigale_list()",
             "e-folding time of the late starburst population model in Myr.",
             50.
-        )),
-        ("age_burst", (
+        ),
+        "age_burst": (
             "cigale_list(dtype=int, minvalue=1.)",
             "Age of the late burst in Myr. The precision is 1 Myr.",
             20
-        )),
-        ("f_burst", (
+        ),
+        "f_burst": (
             "cigale_list(minvalue=0., maxvalue=0.9999)",
             "Mass fraction of the late burst population.",
             0.
-        )),
-        ("sfr_A", (
+        ),
+        "sfr_A": (
             "cigale_list(minvalue=0.)",
             "Multiplicative factor controlling the SFR if normalise is False. "
             "For instance without any burst: SFR(t)=sfr_A×t×exp(-t/τ)/τ²",
             1.
-        )),
-        ("normalise", (
+        ),
+        "normalise": (
             "boolean()",
             "Normalise the SFH to produce one solar mass.",
             True
-        )),
-    ])
+        ),
+    }
 
     def _init_code(self):
         self.tau_main = float(self.parameters["tau_main"])
@@ -95,12 +86,12 @@ class SFHDelayed(SedModule):
         sfr_burst = np.exp(-t_burst / self.tau_burst)
 
         # Height of the late burst to have the desired produced mass fraction
-        sfr_burst *= (self.f_burst / (1.-self.f_burst) * np.sum(self.sfr) /
+        sfr_burst *= (self.f_burst / (1. - self.f_burst) * np.sum(self.sfr) /
                       np.sum(sfr_burst))
 
         # We add the age burst exponential for ages superior to age_main -
         # age_burst
-        self.sfr[-(t_burst[-1]+1):] += sfr_burst
+        self.sfr[-(t_burst[-1] + 1):] += sfr_burst
 
         # Compute the integral of the SFH and normalise it to 1 solar mass
         # if asked to.
@@ -131,6 +122,7 @@ class SFHDelayed(SedModule):
         sed.add_info("sfh.age_burst", self.age_burst, unit='Myr')
         sed.add_info("sfh.tau_burst", self.tau_burst, unit='Myr')
         sed.add_info("sfh.f_burst", self.f_burst)
+
 
 # SedModule to be returned by get_module
 Module = SFHDelayed

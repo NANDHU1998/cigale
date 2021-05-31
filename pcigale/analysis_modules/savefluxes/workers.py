@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013-2014 Institute of Astronomy
-# Copyright (C) 2014 Yannick Roehlly <yannick@iaora.eu>
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly & Médéric Boquien
-
 import numpy as np
+from pathlib import Path
 
 from ...warehouse import SedWarehouse
 
@@ -62,6 +56,6 @@ def fluxes(idx, midx):
             gbl_models.intprop[prop][idx] = sed.info[prop]
 
     if gbl_save is True:
-        sed.to_fits(f"out/{midx}")
+        sed.to_fits(Path('out') / f"{midx}")
 
     gbl_counter.inc()

@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2017 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 from astropy.table import Column
 import numpy as np
+from pathlib import Path
 from scipy.constants import parsec
 
 from ..utils.cosmology import luminosity_distance
@@ -12,7 +8,7 @@ from utils.io import read_table
 from .utils import get_info
 
 
-class ObservationsManager(object):
+class ObservationsManager:
     """Class to abstract the handling of the observations and provide a
     consistent interface for the rest of cigale to deal with observations.
 
@@ -27,7 +23,7 @@ class ObservationsManager(object):
             return ObservationsManagerVirtual(config, **kwargs)
 
 
-class ObservationsManagerPassbands(object):
+class ObservationsManagerPassbands:
     """Class to generate a manager for data files providing fluxes in
     passbands.
 
@@ -161,7 +157,7 @@ class ObservationsManagerPassbands(object):
                 colerr = Column(data=np.fabs(self.table[item] * defaulterror),
                                 name=error)
                 self.table.add_column(colerr,
-                                      index=self.table.colnames.index(item)+1)
+                                      index=self.table.colnames.index(item) + 1)
                 print(f"Warning: {defaulterror * 100}% of {item} taken as "
                       f"errors.")
 
@@ -224,7 +220,7 @@ class ObservationsManagerPassbands(object):
             error = item + '_err'
             w = np.where(self.table[error] >= 0.)
             self.table[error][w] = np.sqrt(self.table[error][w]**2. + (
-                self.table[item][w]*modelerror)**2.)
+                self.table[item][w] * modelerror)**2.)
 
     def generate_mock(self, fits):
         """Replaces the actual observations with a mock catalogue. It is
@@ -266,12 +262,13 @@ class ObservationsManagerPassbands(object):
             Root of the filename where to save the observations.
 
         """
-        self.table.write(f'out/{filename}.fits')
-        self.table.write(f'out/{filename}.txt', format='ascii.fixed_width',
+        out = Path('out')
+        self.table.write(out / f'{filename}.fits')
+        self.table.write(out / f'{filename}.txt', format='ascii.fixed_width',
                          delimiter=None)
 
 
-class ObservationsManagerVirtual(object):
+class ObservationsManagerVirtual:
     """Virtual observations manager when there is no observations file given
     as input. In that case we only use the list of bands given in the
     pcigale.ini file.
@@ -299,7 +296,7 @@ class ObservationsManagerVirtual(object):
         return 0
 
 
-class Observation(object):
+class Observation:
     """Class to take one row of the observations table and extract the list of
     fluxes, intensive properties, extensive properties and their errors, that
     are going to be considered in the fit.

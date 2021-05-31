@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2014 Yannick Roehlly
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 from astropy.io.votable.tree import VOTableFile, Resource, Table, Field, Info
 import numpy as np
 
@@ -47,15 +42,15 @@ def save_sed_to_vo(sed, filename, norm=1.):
               ucd="em.wl"),
         Field(votable, name="L_lambda_total", datatype="double", unit="W/nm",
               ucd="phot.flux")]
-    for name in sed.contribution_names:
+    for name in sed.luminosities:
         Llambda_fields.append(Field(votable, name=name, datatype="double",
                                     unit="W/nm", ucd="phot.flux"))
     Llambda_table.fields.extend(Llambda_fields)
     Llambda_table.create_arrays(len(sed.wavelength_grid))
     Llambda_table.array["wavelength"] = sed.wavelength_grid
     Llambda_table.array["L_lambda_total"] = norm * sed.luminosity
-    for name in sed.contribution_names:
-        Llambda_table.array[name] = norm * sed.get_lumin_contribution(name)
+    for name in sed.luminosities:
+        Llambda_table.array[name] = norm * sed.luminosities(name)
 
     # SFH
     if sed.sfh is not None:

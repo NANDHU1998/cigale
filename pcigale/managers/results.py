@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2017 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 """These classes manage the results from the analysis. The main class
 ResultsManager contains instances of BayesResultsManager and BestResultsManager
 that contain the bayesian and best-fit estimates of the physical properties
@@ -11,6 +6,7 @@ etc. Each of these classes contain a merge() method that allows to combine
 results of the analysis with different blocks of models.
 """
 import ctypes
+from pathlib import Path
 
 from astropy.table import Table, Column
 from astropy.units import Unit, LogUnit
@@ -19,7 +15,7 @@ import numpy as np
 from .utils import SharedArray
 
 
-class BayesResultsManager(object):
+class BayesResultsManager:
     """This class contains the results of the bayesian estimates of the
     physical properties of the analysed objects. It is constructed from a
     ModelsManager instance, which provides the required information on the
@@ -109,10 +105,10 @@ class BayesResultsManager(object):
                     for prop in merged.exterror}
         fluxmean = {band: np.array([result.fluxmean[band]
                                    for result in results])
-                   for band in merged.fluxmean}
+                    for band in merged.fluxmean}
         fluxerror = {band: np.array([result.fluxerror[band]
                                     for result in results])
-                    for band in merged.fluxerror}
+                     for band in merged.fluxerror}
         weight = np.array([result.weight for result in results])
 
         totweight = np.nansum(weight, axis=0)
@@ -127,7 +123,7 @@ class BayesResultsManager(object):
             # datapoints has been substituted with the weights. In short we
             # exploit the fact that Var(X) = E(Var(X)) + Var(E(X)).
             merged.interror[prop][:] = np.sqrt(np.nansum(
-                weight * (interror[prop]**2. + (intmean[prop]-merged.intmean[prop])**2), axis=0) / totweight)
+                weight * (interror[prop]**2. + (intmean[prop] - merged.intmean[prop])**2), axis=0) / totweight)
 
         for prop in merged.extmean:
             merged.extmean[prop][:] = np.nansum(
@@ -139,7 +135,7 @@ class BayesResultsManager(object):
             # datapoints has been substituted with the weights. In short we
             # exploit the fact that Var(X) = E(Var(X)) + Var(E(X)).
             merged.exterror[prop][:] = np.sqrt(np.nansum(
-                weight * (exterror[prop]**2. + (extmean[prop]-merged.extmean[prop])**2), axis=0) / totweight)
+                weight * (exterror[prop]**2. + (extmean[prop] - merged.extmean[prop])**2), axis=0) / totweight)
 
         for prop in merged.extmean:
             if prop.endswith('_log'):
@@ -160,13 +156,12 @@ class BayesResultsManager(object):
             # datapoints has been substituted with the weights. In short we
             # exploit the fact that Var(X) = E(Var(X)) + Var(E(X)).
             merged.fluxerror[band][:] = np.sqrt(np.nansum(
-                weight * (fluxerror[band]**2. + (fluxmean[band]-merged.fluxmean[band])**2), axis=0) / totweight)
-
+                weight * (fluxerror[band]**2. + (fluxmean[band] - merged.fluxmean[band])**2), axis=0) / totweight)
 
         return merged
 
 
-class BestResultsManager(object):
+class BestResultsManager:
     """This class contains the physical properties of the best fit of the
     analysed objects. It is constructed from a ModelsManager instance, which
     provides the required information on the shape of the arrays. Because it
@@ -330,7 +325,7 @@ class BestResultsManager(object):
               f"χ²_red<0.5")
 
 
-class ResultsManager(object):
+class ResultsManager:
     """This class contains the physical properties (best fit and bayesian) of
     the analysed objects. It is constructed from a ModelsManager instance,
     which provides the required information to initialise the instances of
@@ -405,24 +400,24 @@ class ResultsManager(object):
             else:
                 unit = Unit(self.unit[prop])
             table.add_column(Column(self.bayes.intmean[prop],
-                                    name="bayes."+prop, unit=unit))
+                                    name="bayes." + prop, unit=unit))
             table.add_column(Column(self.bayes.interror[prop],
-                                    name="bayes."+prop+"_err", unit=unit))
+                                    name="bayes." + prop + "_err", unit=unit))
         for prop in sorted(self.bayes.extmean):
             if prop.endswith('_log'):
                 unit = LogUnit(self.unit[prop[:-4]])
             else:
                 unit = Unit(self.unit[prop])
             table.add_column(Column(self.bayes.extmean[prop],
-                                    name="bayes."+prop, unit=unit))
+                                    name="bayes." + prop, unit=unit))
             table.add_column(Column(self.bayes.exterror[prop],
-                                    name="bayes."+prop+"_err", unit=unit))
+                                    name="bayes." + prop + "_err", unit=unit))
         for band in sorted(self.bayes.fluxmean):
             unit = self.fluxunit(band)
             table.add_column(Column(self.bayes.fluxmean[band],
-                                    name="bayes."+band, unit=unit))
+                                    name="bayes." + band, unit=unit))
             table.add_column(Column(self.bayes.fluxerror[band],
-                                    name="bayes."+band+"_err",
+                                    name="bayes." + band + "_err",
                                     unit=unit))
 
         table.add_column(Column(self.best.chi2, name="best.chi_square"))
@@ -433,19 +428,19 @@ class ResultsManager(object):
 
         for prop in sorted(self.best.intprop):
             table.add_column(Column(self.best.intprop[prop],
-                                    name="best."+prop,
+                                    name="best." + prop,
                                     unit=Unit(self.unit[prop])))
         for prop in sorted(self.best.extprop):
             table.add_column(Column(self.best.extprop[prop],
-                                    name="best."+prop,
+                                    name="best." + prop,
                                     unit=Unit(self.unit[prop])))
 
         for band in self.best.flux:
             table.add_column(Column(self.best.flux[band],
-                                    name="best."+band,
+                                    name="best." + band,
                                     unit=self.fluxunit(band)))
 
-
-        table.write(f"out/{filename}.txt", format='ascii.fixed_width',
+        out = Path('out')
+        table.write(out / f"{filename}.txt", format='ascii.fixed_width',
                     delimiter=None)
-        table.write(f"out/{filename}.fits", format='fits')
+        table.write(out / f"{filename}.fits", format='fits')

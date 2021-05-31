@@ -1,22 +1,13 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013-2014 Yannick Roehlly
-# Copyright (C) 2013 Institute of Astronomy
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly, Médéric Boquien & Denis Burgarella
-
 from astropy.table import Table
 import matplotlib
 import sys
-from os import path
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import numpy as np
 import pkg_resources
 from scipy import stats
+
 from utils.counter import Counter
 
 # Name of the file containing the best models information
@@ -38,8 +29,8 @@ def pool_initializer(counter):
 def mock(config, nologo, outdir):
     """Plot the comparison of input/output values of analysed variables.
     """
-    best_results_file = path.abspath(path.join(outdir, BEST_RESULTS))
-    mock_results_file = path.abspath(path.join(outdir, MOCK_RESULTS))
+    best_results_file = outdir / BEST_RESULTS
+    mock_results_file = outdir / MOCK_RESULTS
 
     try:
         exact = Table.read(best_results_file)
@@ -57,14 +48,14 @@ def mock(config, nologo, outdir):
 
     for param in params:
         if param.endswith('_log'):
-            param = "best."+param
+            param = f"best.{param}"
             exact[param] = np.log10(exact[param[:-4]])
 
     logo = False if nologo else plt.imread(pkg_resources.resource_filename(__name__,
                                                                            "../resources/CIGALE.png"))
 
-    arguments = [(exact["best."+param], estimated["bayes."+param], param, logo, outdir)
-                 for param in params]
+    arguments = [(exact[f"best.{param}"], estimated[f"bayes.{param}"], param,
+                  logo, outdir) for param in params]
 
     counter = Counter(len(arguments))
     with mp.Pool(processes=config.configuration['cores'], initializer=pool_initializer,
@@ -87,8 +78,8 @@ def _mock_worker(exact, estimated, param, logo, outdir):
         Name of the parameter
     nologo: boolean
         Do not add the logo when set to true.
-    outdir: string
-        The absolute path to outdir
+    outdir: Path
+        Path to outdir
 
     """
     gbl_counter.inc()
@@ -115,13 +106,10 @@ def _mock_worker(exact, estimated, param, logo, outdir):
     plt.minorticks_on()
 
     if logo is not False:
-        # Multiplying the dpi by 2 is a hack so the figure is small and not too
-        # pixelated
-        figwidth = figure.get_figwidth() * figure.dpi * 2.
         figure.figimage(logo, 0, 0, origin='upper',
                         zorder=0, alpha=1)
 
     plt.tight_layout()
-    plt.savefig(f'{outdir}/mock_{param}.pdf', dpi=figure.dpi * 2.)
+    plt.savefig(outdir / f'mock_{param}.pdf', dpi=figure.dpi * 2.)
 
     plt.close()

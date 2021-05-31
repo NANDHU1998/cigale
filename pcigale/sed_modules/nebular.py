@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2014 University of Cambridge
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien <mboquien@ast.cam.ac.uk>
-
-from collections import OrderedDict
-from copy import deepcopy
-
 import numpy as np
 import scipy.constants as cst
 
-from pcigale.data import Database
+from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
 default_lines = ['Ly-alpha',
@@ -41,6 +33,7 @@ default_lines = ['Ly-alpha',
                  'SII-673.1'
                  ]
 
+
 class NebularEmission(SedModule):
     """
     Module computing the nebular emission from the ultraviolet to the
@@ -56,36 +49,36 @@ class NebularEmission(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ('logU', (
+    parameter_list = {
+        'logU': (
             'cigale_list(options=-4.0 & -3.9 & -3.8 & -3.7 & -3.6 & -3.5 & '
             '-3.4 & -3.3 & -3.2 & -3.1 & -3.0 & -2.9 & -2.8 & -2.7 & -2.6 & '
             '-2.5 & -2.4 & -2.3 & -2.2 & -2.1 & -2.0 & -1.9 & -1.8 & -1.7 & '
             '-1.6 & -1.5 & -1.4 & -1.3 & -1.2 & -1.1 & -1.0)',
             "Ionisation parameter",
             -2.
-        )),
-        ('f_esc', (
+        ),
+        'f_esc': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "Fraction of Lyman continuum photons escaping the galaxy",
             0.
-        )),
-        ('f_dust', (
+        ),
+        'f_dust': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "Fraction of Lyman continuum photons absorbed by dust",
             0.
-        )),
-        ('lines_width', (
+        ),
+        'lines_width': (
             'cigale_list(minvalue=0.)',
             "Line width in km/s",
             300.
-        )),
-        ('emission', (
+        ),
+        'emission': (
             'boolean()',
             "Include nebular emission.",
             True
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         """Get the nebular emission lines out of the database and resample
@@ -111,35 +104,38 @@ class NebularEmission(SedModule):
             raise Exception("Escape fraction+f_dust>1")
 
         if self.emission:
-            with Database() as db:
-                metallicities = db.get_nebular_continuum_parameters()['metallicity']
-                self.lines_template = {m: db.get_nebular_lines(m, self.logU)
-                                    for m in metallicities}
-                self.cont_template = {m: db.get_nebular_continuum(m, self.logU)
-                                    for m in metallicities}
+            with Database("nebular_continuum") as db:
+                metallicities = db.parameters['Z']
+                self.cont_template = {m: db.get(Z=m, logU=self.logU)
+                                      for m in metallicities}
+
+            with Database("nebular_lines") as db:
+                self.lines_template = {m: db.get(Z=m, logU=self.logU)
+                                       for m in metallicities}
 
             self.linesdict = {m: dict(zip(self.lines_template[m].name,
-                                          zip(self.lines_template[m].wave,
-                                              self.lines_template[m].ratio)))
+                                          zip(self.lines_template[m].wl,
+                                              self.lines_template[m].spec)))
                               for m in metallicities}
 
             for lines in self.lines_template.values():
                 new_wave = np.array([])
-                for line_wave in lines.wave:
+                for line_wave in lines.wl:
                     width = line_wave * self.lines_width * 1e3 / cst.c
                     new_wave = np.concatenate((new_wave,
-                                            np.linspace(line_wave - 3. * width,
-                                                        line_wave + 3. * width,
-                                                        9)))
+                                               np.linspace(line_wave - 3. * width,
+                                                           line_wave + 3. * width,
+                                                           9)))
                 new_wave.sort()
                 new_flux = np.zeros_like(new_wave)
-                for line_flux, line_wave in zip(lines.ratio, lines.wave):
+                log2 = np.log(2)
+                for line_flux, line_wave in zip(lines.spec, lines.wl):
                     width = line_wave * self.lines_width * 1e3 / cst.c
-                    new_flux += (line_flux * np.exp(- 4. * np.log(2.) *
+                    new_flux += (line_flux * np.exp(- 4. * log2 *
                                 (new_wave - line_wave) ** 2. / (width * width)) /
-                                (width * np.sqrt(np.pi / np.log(2.)) / 2.))
-                lines.wave = new_wave
-                lines.ratio = new_flux
+                                (width * np.sqrt(np.pi / log2) / 2.))
+                lines.wl = new_wave
+                lines.spec = new_flux
 
             # To take into acount the escape fraction and the fraction of Lyman
             # continuum photons absorbed by dust we correct by a factor
@@ -169,10 +165,10 @@ class NebularEmission(SedModule):
             self.absorbed_young = np.zeros(sed.wavelength_grid.size)
 
         self.absorbed_old[:self.idx_Ly_break] = -(
-            sed.get_lumin_contribution('stellar.old')[:self.idx_Ly_break] *
+            sed.luminosities['stellar.old'][:self.idx_Ly_break] *
             (1. - self.fesc))
         self.absorbed_young[:self.idx_Ly_break] = -(
-            sed.get_lumin_contribution('stellar.young')[:self.idx_Ly_break] *
+            sed.luminosities['stellar.young'][:self.idx_Ly_break] *
             (1. - self.fesc))
 
         sed.add_module(self.name, self.parameters)
@@ -190,7 +186,6 @@ class NebularEmission(SedModule):
         if self.emission:
             NLy_old = sed.info['stellar.n_ly_old']
             NLy_young = sed.info['stellar.n_ly_young']
-            NLy_tot = NLy_old + NLy_young
             metallicity = sed.info['stellar.metallicity']
             lines = self.lines_template[metallicity]
             linesdict = self.linesdict[metallicity]
@@ -205,15 +200,15 @@ class NebularEmission(SedModule):
                                    ratio * NLy_old * self.corr,
                                    ratio * NLy_young * self.corr)
 
-            sed.add_contribution('nebular.lines_old', lines.wave,
-                                 lines.ratio * NLy_old * self.corr)
-            sed.add_contribution('nebular.lines_young', lines.wave,
-                                 lines.ratio * NLy_young * self.corr)
+            sed.add_contribution('nebular.lines_old', lines.wl,
+                                 lines.spec * NLy_old * self.corr)
+            sed.add_contribution('nebular.lines_young', lines.wl,
+                                 lines.spec * NLy_young * self.corr)
 
-            sed.add_contribution('nebular.continuum_old', cont.wave,
-                                 cont.lumin * NLy_old * self.corr)
-            sed.add_contribution('nebular.continuum_young', cont.wave,
-                                 cont.lumin * NLy_young * self.corr)
+            sed.add_contribution('nebular.continuum_old', cont.wl,
+                                 cont.spec * NLy_old * self.corr)
+            sed.add_contribution('nebular.continuum_young', cont.wl,
+                                 cont.spec * NLy_young * self.corr)
 
 
 # SedModule to be returned by get_module

@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Copyright (C) 2015-2016 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 Star Formation History quenching (smooth) module
 ================================================
@@ -13,8 +7,6 @@ given age, the Star Formation Rate becomes linear to be multiplied by
 1- quenching_factor at the end of the history.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 
@@ -28,34 +20,34 @@ class SfhQuenchSmooth(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("quenching_time", (
+    parameter_list = {
+        "quenching_time": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Look-back time when the quenching starts in Myr.",
             0
-        )),
-        ("quenching_factor", (
+        ),
+        "quenching_factor": (
             "cigale_list(minvalue=0., maxvalue=1.)",
             "Quenching factor applied to the SFH. After the quenching time, "
             "the SFR is multiplied by 1 - quenching factor and made constant. "
             "The factor must be between 0 (no quenching) and 1 (no more star "
             "formation).",
             0.
-        )),
-        ("normalise", (
+        ),
+        "normalise": (
             "boolean()",
             "Normalise the SFH to produce one solar mass.",
             True
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         self.quenching_age = int(self.parameters["quenching_time"])
         self.quenching_factor = float(self.parameters["quenching_factor"])
         if type(self.parameters["normalise"]) is str:
-            normalise = self.parameters["normalise"].lower() == 'true'
+            self.normalise = self.parameters["normalise"].lower() == 'true'
         else:
-            normalise = bool(self.parameters["normalise"])
+            self.normalise = bool(self.parameters["normalise"])
 
     def process(self, sed):
         """

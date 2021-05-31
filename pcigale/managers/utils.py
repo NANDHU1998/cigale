@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2018 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Héctor Salas
-
 """
 Various utility functions for pcigale manager modules
 """
@@ -16,15 +11,14 @@ from ..warehouse import SedWarehouse
 
 def get_info(cls):
     warehouse = SedWarehouse()
-    sed = warehouse.get_sed(cls.conf['sed_modules'],
-                            cls.params.from_index(0))
+    sed = warehouse.get_sed(cls.conf['sed_modules'], cls.params.from_index(0))
     info = list(sed.info.keys())
     info.sort()
 
     return (info, sed.unit, sed.mass_proportional_info)
 
 
-class SharedArray(object):
+class SharedArray:
     """Class to create a shared array that can be read/written by parallel
     processes, were data related to the models is going to be stored. For
     memory efficiency reasons, we use RawArrays that will be passed in argument
@@ -37,6 +31,7 @@ class SharedArray(object):
     implementation and if new operations are done on these arrays, it may be
     necessary to define them here.
     """
+
     def __init__(self, size, dtype=ctypes.c_double):
         """The RawArray is stored in raw, which is protected by a setter and
         a getter. The array property returns raw as a regular Numpy array. It

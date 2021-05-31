@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2014 University of Cambridge
-# Copyright (C) 2016 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 import collections
 import itertools
 import numpy as np
@@ -11,7 +5,7 @@ import numpy as np
 from utils.io import read_table
 
 
-class ParametersManager(object):
+class ParametersManager:
     """Class to abstract the call to the relevant parameters manager depending
     how the physical parameters of the models are provided (directly in the
     pcigale.ini file ).
@@ -30,7 +24,7 @@ class ParametersManager(object):
             return ParametersManagerGrid(conf)
 
 
-class ParametersManagerGrid(object):
+class ParametersManagerGrid:
     """Class to generate a parameters manager for a systematic grid using the
     parameters given in the pcigale.ini file."""
 
@@ -75,7 +69,7 @@ class ParametersManagerGrid(object):
         k = len(l) // nb
         step = k + nz - k % nz
 
-        return [l[i * step: (i+1) * step] for i in range(nb)]
+        return [l[i * step: (i + 1) * step] for i in range(nb)]
 
     def _param_dict_combine(self, dictionary):
         """Given a dictionary associating to each key an array, returns all the
@@ -94,7 +88,7 @@ class ParametersManagerGrid(object):
 
         """
         # We make a copy of the dictionary as we are modifying it.
-        dictionary = collections.OrderedDict(dictionary)
+        dictionary = dict(dictionary)
 
         # First, we must ensure that all values are lists; when a value is a
         # single element, we put it in a list.
@@ -139,7 +133,7 @@ class ParametersManagerGrid(object):
         return params
 
 
-class ParametersManagerFile(object):
+class ParametersManagerFile:
     """Class to generate a parameters manager for list of parameters given in an
     input file."""
 
@@ -195,7 +189,7 @@ class ParametersManagerFile(object):
         """
         step = len(l) // nb
         if step > 0:
-            return [l[i * step: (i+1) * step] for i in range(nb)]
+            return [l[i * step: (i + 1) * step] for i in range(nb)]
 
         raise ValueError("The number of blocks must be no more than the number"
                          "of models.")
