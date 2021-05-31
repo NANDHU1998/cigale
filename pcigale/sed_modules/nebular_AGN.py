@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2014 University of Cambridge
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien <mboquien@ast.cam.ac.uk>
-
-from collections import OrderedDict
-from copy import deepcopy
-
 import numpy as np
 import scipy.constants as cst
 
-from pcigale.data import Database
+from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
 default_lines = ['Ly-alpha',
@@ -40,70 +32,69 @@ default_lines = ['Ly-alpha',
                  'SII-671.6',
                  'SII-673.1'
                  ]
-#default_lines = [] to deactivate the previous list
 
 class NebularEmissionAGN(SedModule):
     """
     Module computing the nebular emission from the ultraviolet to the
     near-infrared for AGN. It includes both the nebular lines and the nebular
-    continuum (optional) for both the NLR and BLR regions. It takes into account the escape fraction and the
-    absorption by dust.
+    continuum (optional) for both the NLR and BLR regions. It takes into account
+    the escape fraction and the absorption by dust.
 
-    Both the nebular continuum and the flux of each line are scaled directly from the number of ionizing photons NLy given by the AGN radiation field (!!!! set to 1 for now (L229) !!!!).
+    Both the nebular continuum and the flux of each line are scaled directly
+    from the number of ionizing photons NLy given by the AGN radiation field.
 
     """
 
-    parameter_list = OrderedDict([
-        ('metallicity', (
+    parameter_list = {
+        'metallicity': (
              'cigale_list(options=-0.5 & 0.0 & 0.5)',
              "dzetaO metallicity",
              0.0
-         )),
-        ('f_NLR', (
+        ),
+        'f_NLR': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "NLR covering factor",
             0.2
-        )),
-         ('f_BLR', (
+        ),
+        'f_BLR': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "NLR covering factor",
             0.1
-        )),
-        
-        ('logU', (
+        ),
+        'logU': (
             'cigale_list(options=-4.0 & -3.9 & -3.8 & -3.7 & -3.6 & -3.5 & '
             '-3.4 & -3.3 & -3.2 & -3.1 & -3.0 & -2.9 & -2.8 & -2.7 & -2.6 & '
             '-2.5 & -2.4 & -2.3 & -2.2 & -2.1 & -2.0 & -1.9 & -1.8 & -1.7 & '
             '-1.6 & -1.5 & -1.4 & -1.3 & -1.2 & -1.1 & -1.0)',
             "Ionisation parameter",
             -3.
-        )),
-        ('f_esc', (
+        ),
+        'f_esc': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "Fraction of Lyman continuum photons escaping the galaxy",
             0.
-        )),
-        ('f_dust', (
+        ),
+        'f_dust': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "Fraction of Lyman continuum photons absorbed by dust",
             0.
-        )),
-        ('lines_width_NLR', (
+        ),
+        'lines_width_NLR': (
             'cigale_list(minvalue=0.)',
             "Line width in km/s",
             300.
-        )),
-        ('lines_width_BLR', (
+        ),
+        'lines_width_BLR': (
             'cigale_list(minvalue=0.)',
             "Line width in km/s",
             800.
-        )),
-        ('emission', (
+        ),
+        'emission': (
             'boolean()',
             "Include nebular emission.",
             True
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         """Get the nebular emission lines out of the database and resample
@@ -133,29 +124,32 @@ class NebularEmissionAGN(SedModule):
             raise Exception("Escape fraction+f_dust>1")
 
         if self.emission:
-            with Database() as db:
-                metallicities = db.get_nebular_continuum_AGN_parameters()['metallicity']               
-                self.lines_template_NLR = {m: db.get_nebular_lines_AGN('NLR', m, self.logU)
-                                    for m in metallicities}               
-                self.cont_template_NLR = {m: db.get_nebular_continuum_AGN('NLR', m,self.logU)
-                                    for m in metallicities}
-                self.lines_template_BLR = {m: db.get_nebular_lines_AGN('BLR', m, self.logU)
-                                    for m in metallicities}
-                self.cont_template_BLR = {m: db.get_nebular_continuum_AGN('BLR', m,self.logU)
-                                    for m in metallicities}
+            with Database("nebular_lines_NLR") as db:
+                metallicities = db.parameters["Z"]
+                self.lines_template_NLR = {m: db.get(Z=m, logU=self.logU)
+                                           for m in metallicities}
+            with Database("nebular_continuum_NLR") as db:
+                self.cont_template_NLR = {m: db.get(Z=m,logU=self.logU)
+                                          for m in metallicities}
+            with Database("nebular_lines_BLR") as db:
+                self.lines_template_BLR = {m: db.get(Z=m, logU=self.logU)
+                                           for m in metallicities}
+            with Database("nebular_continuum_BLR") as db:
+                self.cont_template_BLR = {m: db.get(Z=m, logU=self.logU)
+                                          for m in metallicities}
 
             self.linesdict_NLR = {m: dict(zip(self.lines_template_NLR[m].name,
-                                          zip(self.lines_template_NLR[m].wave,
-                                              self.lines_template_NLR[m].ratio)))
-                              for m in metallicities}
+                                          zip(self.lines_template_NLR[m].wl,
+                                              self.lines_template_NLR[m].spec)))
+                                  for m in metallicities}
             self.linesdict_BLR = {m: dict(zip(self.lines_template_BLR[m].name,
-                                          zip(self.lines_template_BLR[m].wave,
-                                              self.lines_template_BLR[m].ratio)))
-                              for m in metallicities}
+                                          zip(self.lines_template_BLR[m].wl,
+                                              self.lines_template_BLR[m].spec)))
+                                  for m in metallicities}
 
             for lines in self.lines_template_NLR.values():
                 new_wave = np.array([])
-                for line_wave in lines.wave:
+                for line_wave in lines.wl:
                     width = line_wave * self.lines_width_NLR * 1e3 / cst.c
                     new_wave = np.concatenate((new_wave,
                                             np.linspace(line_wave - 3. * width,
@@ -163,17 +157,17 @@ class NebularEmissionAGN(SedModule):
                                                         9)))
                 new_wave.sort()
                 new_flux = np.zeros_like(new_wave)
-                for line_flux, line_wave in zip(lines.ratio, lines.wave):
+                for line_flux, line_wave in zip(lines.spec, lines.wl):
                     width = line_wave * self.lines_width_NLR * 1e3 / cst.c
                     new_flux += (line_flux * np.exp(- 4. * np.log(2.) *
                                 (new_wave - line_wave) ** 2. / (width * width)) /
                                 (width * np.sqrt(np.pi / np.log(2.)) / 2.))
-                lines.wave = new_wave
-                lines.ratio = new_flux* self.f_NLR
+                lines.wl = new_wave
+                lines.spec = new_flux * self.f_NLR
 
             for lines in self.lines_template_BLR.values():
                 new_wave = np.array([])
-                for line_wave in lines.wave:
+                for line_wave in lines.wl:
                     width = line_wave * self.lines_width_BLR * 1e3 / cst.c
                     new_wave = np.concatenate((new_wave,
                                             np.linspace(line_wave - 3. * width,
@@ -181,19 +175,19 @@ class NebularEmissionAGN(SedModule):
                                                         9)))
                 new_wave.sort()
                 new_flux = np.zeros_like(new_wave)
-                for line_flux, line_wave in zip(lines.ratio, lines.wave):
+                for line_flux, line_wave in zip(lines.spec, lines.wl):
                     width = line_wave * self.lines_width_BLR * 1e3 / cst.c
                     new_flux += (line_flux * np.exp(- 4. * np.log(2.) *
                                 (new_wave - line_wave) ** 2. / (width * width)) /
                                 (width * np.sqrt(np.pi / np.log(2.)) / 2.))
-                lines.wave = new_wave
-                lines.ratio = new_flux* self.f_BLR
+                lines.wl = new_wave
+                lines.spec = new_flux* self.f_BLR
 
-            for NLR,BLR in zip(self.cont_template_NLR.values(), self.cont_template_BLR.values()):
-                NLR.lumin *= self.f_NLR
-                BLR.lumin *= self.f_BLR
-          
-            
+            for NLR, BLR in zip(self.cont_template_NLR.values(),
+                                self.cont_template_BLR.values()):
+                NLR.spec *= self.f_NLR
+                BLR.spec *= self.f_BLR
+
         self.idx_Ly_break = None
         self.absorbed_old = None
         self.absorbed_young = None
@@ -207,13 +201,10 @@ class NebularEmissionAGN(SedModule):
         parameters: dictionary containing the parameters
 
         """
-        
 
         sed.add_module(self.name, self.parameters)
-             
 
         if self.emission:
-           
             #NLy = sed.info['AGN.n_ly'] # to be written
             NLy = 1.
             metallicity = self.metallicity
@@ -224,31 +215,28 @@ class NebularEmissionAGN(SedModule):
             cont_NLR = self.cont_template_NLR[metallicity]
             cont_BLR = self.cont_template_BLR[metallicity]
 
-            sed.add_info('AGN.nebular.lines_width_NLR', self.lines_width_NLR, unit='km/s')
-            sed.add_info('AGN.nebular.lines_width_BLR', self.lines_width_BLR, unit='km/s')
+            sed.add_info('AGN.nebular.lines_width_NLR', self.lines_width_NLR,
+                         unit='km/s')
+            sed.add_info('AGN.nebular.lines_width_BLR', self.lines_width_BLR,
+                         unit='km/s')
             sed.add_info('AGN.nebular.logU', self.logU)
 
             for line in default_lines:
                 wave_NLR, ratio_NLR = linesdict_NLR[line]
                 wave_BLR, ratio_BLR = linesdict_BLR[line]
                 sed.lines_AGN[line] = (wave_NLR,
-                                   ratio_NLR * NLy,
-                                   ratio_BLR * NLy)
+                                       ratio_NLR * NLy,
+                                       ratio_BLR * NLy)
 
-        
+            sed.add_contribution('nebular.lines_NLR', lines_NLR.wl,
+                                 lines_NLR.spec * NLy)
+            sed.add_contribution('nebular.lines_BLR', lines_BLR.wl,
+                                 lines_BLR.spec * NLy)
 
-            sed.add_contribution('nebular.lines_NLR', lines_NLR.wave,
-                                 lines_NLR.ratio * NLy)
-            sed.add_contribution('nebular.lines_BLR', lines_BLR.wave,
-                                 lines_BLR.ratio * NLy)
-
-            
-            
-            sed.add_contribution('nebular.continuum_NLR', cont_NLR.wave,
-                                 cont_NLR.lumin * NLy)
-            sed.add_contribution('nebular.continuum_BLR', cont_BLR.wave,
-                                 cont_BLR.lumin * NLy)
-
+            sed.add_contribution('nebular.continuum_NLR', cont_NLR.wl,
+                                 cont_NLR.spec * NLy)
+            sed.add_contribution('nebular.continuum_BLR', cont_BLR.wl,
+                                 cont_BLR.spec * NLy)
 
 # SedModule to be returned by get_module
 Module = NebularEmissionAGN

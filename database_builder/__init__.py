@@ -782,11 +782,14 @@ def build_nebular_AGN():
         # Import continuum
         db = SimpleDatabase(f"nebular_continuum_{rg}", writable=True)
         for metallicity in metallicities:
-            cont = np.genfromtxt(path / f"continuum_{rg}_0.0_{metallicity}_Cig.dat") # there is one continuum file for each metallicity
-            spectra = cont[1:, 2::3] # to skip the header (1stline) and to select only the second models with ne=1e3cm-3 for NLR and ne=1e10cm-3 for BLR.
+             # There is one continuum file for each metallicity
+            cont = np.genfromtxt(path / f"continuum_{rg}_0.0_{metallicity}_Cig.dat")
+            # Skip the header (1st line) and select only the second models with
+            # ne = 1e3 cm¯³ for NLR and ne = 1e10 cm¯³ for BLR.
+            spectra = cont[1:, 2::3]
             for logU, spectrum in zip(list_logU, spectra.T):
                 db.add({"Z": metallicity, "logU": logU},
-                       {"wl": wave_lines, "spec": spectrum})
+                       {"wl": wave_cont, "spec": spectrum})
         db.close()
 
 
