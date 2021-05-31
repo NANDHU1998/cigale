@@ -170,7 +170,7 @@ class Configuration:
 
         # Getting the list of the filters available in pcigale database
         with Database("filters") as db:
-            filter_list = db.parameters["names"]
+            filter_list = db.parameters["name"]
         filter_list += [f'line.{line}' for line in default_lines]
 
         if self.config['data_file'] != '':
