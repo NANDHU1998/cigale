@@ -1,29 +1,15 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Authors: Yannick Roehlly, Médéric Boquien, Laure Ciesla
+"""This script is used the build pcigale internal database containing."""
 
-"""
-This script is used the build pcigale internal database containing:
-- The various filter transmission tables;
-- The Maraston 2005 single stellar population (SSP) data;
-- The Dale and Helou 2002 infra-red templates.
-
-"""
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-import glob
 import io
 import itertools
+from pathlib import Path
+
 import numpy as np
 from scipy import interpolate
 import scipy.constants as cst
 from astropy.table import Table
-from pcigale.data import (Database, Filter, M2005, BC03, BC03_SSP, Fritz2006,
-                          Dale2014, DL2007, DL2014, NebularLines,
-                          NebularContinuum, Schreiber2016, THEMIS,
-                          Yggdrasil_SSP)
+
+from pcigale.data import SimpleDatabase
 
 
 def read_bc03_ssp(filename):
@@ -39,7 +25,7 @@ def read_bc03_ssp(filename):
 
     Parameters
     ----------
-    filename : string
+    filename : Path
 
     Returns
     -------
@@ -60,7 +46,7 @@ def read_bc03_ssp(filename):
         there are 5 informational lines after the time vector. We use this
         generator to the if we are on lines to read or not.
         """
-        if "chab" in filename:
+        if "chab" in filename.stem:
             bad_line_number = 5
         else:
             bad_line_number = 6
@@ -81,7 +67,7 @@ def read_bc03_ssp(filename):
     full_table = []
     tmp_table = []
 
-    with open(filename) as file_:
+    with filename.open() as file_:
         # We read the file line by line.
         for line in file_:
             if what_line == "data":
@@ -137,102 +123,59 @@ def read_bc03_ssp(filename):
     # we remove t=0 from the SSP.
     return time_grid[1:], wavelength, luminosity[:, 1:]
 
+def build_filters():
+    path = Path(__file__).parent / 'filters'
+    db = SimpleDatabase("filters", writable=True)
+    pathlen = len(path.parts)
 
-def build_filters(base):
-    filters = []
-    filters_dir = os.path.join(os.path.dirname(__file__), 'filters/')
-    for filter_file in glob.glob(filters_dir + '**/*.dat', recursive=True):
-        with open(filter_file, 'r') as filter_file_read:
-            filter_name = filter_file_read.readline().strip('# \n\t')
-            filter_type = filter_file_read.readline().strip('# \n\t')
-            filter_description = filter_file_read.readline().strip('# \n\t')
+    for file in path.rglob('*'):
+        if file.suffix not in [".dat", ".pb"]:
+            continue
 
-        # Make the name dynamic for filters in subdirectories
-        tmp_name = filter_file.replace(filters_dir, '')[:-4]
-        if '/' in tmp_name:
-            filter_name = tmp_name.replace('/', '.')
-        filter_table = np.genfromtxt(filter_file)
-        # The table is transposed to have table[0] containing the wavelength
-        # and table[1] containing the transmission.
-        filter_table = filter_table.transpose()
+        with file.open() as f:
+            _ = f.readline() # We use the filename for the name
+            type_ = f.readline().strip('# \n\t')
+            if "gazpar" in str(file):
+                _ = f.readline() # We do not use the calib type
+                name = '.'.join(file.with_suffix('').parts[pathlen + 1:])
+            else:
+                name = '.'.join(file.with_suffix('').parts[pathlen:])
+            desc = f.readline().strip('# \n\t')
+
+        wl, tr = np.genfromtxt(file, unpack=True)
 
         # We convert the wavelength from Å to nm.
-        filter_table[0] *= 0.1
+        wl *= 0.1
 
         # We convert to energy if needed
-        if filter_type == 'photon':
-            filter_table[1] *= filter_table[0]
-        elif filter_type != 'energy':
-            raise ValueError("Filter transmission type can only be "
-                             "'energy' or 'photon'.")
+        if type_ == 'photon':
+            tr *= wl
+        elif type_ != 'energy':
+            raise ValueError("Filter transmission type can only be 'energy' or "
+                             "'photon'.")
 
-        print("Importing %s... (%s points)" % (filter_name,
-                                               filter_table.shape[1]))
-
-        new_filter = Filter(filter_name, filter_description, filter_table)
+        print(f"Importing {name}... ({wl.size} points)")
 
         # We normalise the filter and compute the pivot wavelength. If the
         # filter is a pseudo-filter used to compute line fluxes, it should not
         # be normalised.
-        if not (filter_name.startswith('PSEUDO') or
-                filter_name.startswith('linefilter')):
-            new_filter.normalise()
+        if not name.startswith('PSEUDO'):
+            pivot = np.sqrt(np.trapz(tr, wl) / np.trapz(tr / wl**2, wl))
+
+            # The factor 10²⁰ is so that we get the fluxes directly in mJy when
+            # we integrate with the wavelength in units of nm and the spectrum
+            # in units of W/m²/nm.
+            tr *= 1e20 / (cst.c * np.trapz(tr / wl**2, wl))
         else:
-            new_filter.pivot_wavelength = np.mean(
-                filter_table[0][filter_table[1] > 0]
-            )
-        filters.append(new_filter)
+            pivot = np.mean(wl[tr > 0.])
+        db.add({"name": name},
+               {"wl": wl, "tr": tr, "pivot": pivot, "desc": desc})
 
-    base.add_filters(filters)
+    db.close()
 
-def build_filters_gazpar(base):
-    filters = []
-    filters_dir = os.path.join(os.path.dirname(__file__), 'filters_gazpar/')
-    for filter_file in glob.glob(filters_dir + '**/*.pb', recursive=True):
-        with open(filter_file, 'r') as filter_file_read:
-            _ = filter_file_read.readline() # We use the filename for the name
-            filter_type = filter_file_read.readline().strip('# \n\t')
-            _ = filter_file_read.readline() # We do not yet use the calib type
-            filter_desc = filter_file_read.readline().strip('# \n\t')
-
-        filter_name = filter_file.replace(filters_dir, '')[:-3]
-        filter_name = filter_name.replace('/', '.')
-
-        filter_table = np.genfromtxt(filter_file)
-        # The table is transposed to have table[0] containing the wavelength
-        # and table[1] containing the transmission.
-        filter_table = filter_table.transpose()
-
-        # We convert the wavelength from Å to nm.
-        filter_table[0] *= 0.1
-
-        # We convert to energy if needed
-        if filter_type == 'photon':
-            filter_table[1] *= filter_table[0]
-        elif filter_type != 'energy':
-            raise ValueError("Filter transmission type can only be "
-                             "'energy' or 'photon'.")
-
-        print("Importing %s... (%s points)" % (filter_name,
-                                               filter_table.shape[1]))
-
-        new_filter = Filter(filter_name, filter_desc, filter_table)
-
-        # We normalise the filter and compute the pivot wavelength. If the
-        # filter is a pseudo-filter used to compute line fluxes, it should not
-        # be normalised.
-        if not filter_name.startswith('PSEUDO'):
-            new_filter.normalise()
-        else:
-            new_filter.pivot_wavelength = np.mean(
-                filter_table[0][filter_table[1] > 0]
-            )
-        filters.append(new_filter)
-
-    base.add_filters(filters)
-
-def build_m2005(base):
-    m2005_dir = os.path.join(os.path.dirname(__file__), 'maraston2005/')
+def build_m2005():
+    path = Path(__file__).parent / "maraston2005"
+    db = SimpleDatabase("m2005", writable=True)
 
     # Age grid (1 Myr to 13.7 Gyr with 1 Myr step)
     time_grid = np.arange(1, 13701)
@@ -240,21 +183,19 @@ def build_m2005(base):
 
     # Transpose the table to have access to each value vector on the first
     # axis
-    kroupa_mass = np.genfromtxt(m2005_dir + 'stellarmass.kroupa').transpose()
-    salpeter_mass = \
-        np.genfromtxt(m2005_dir + '/stellarmass.salpeter').transpose()
+    kroupa_mass = np.genfromtxt(path / 'stellarmass.kroupa').transpose()
+    salpeter_mass = np.genfromtxt(path / 'stellarmass.salpeter').transpose()
 
-    for spec_file in glob.glob(m2005_dir + '*.rhb'):
-
-        print("Importing %s..." % spec_file)
+    for spec_file in path.glob('*.rhb'):
+        print(f"Importing {spec_file}...")
 
         spec_table = np.genfromtxt(spec_file).transpose()
         metallicity = spec_table[1, 0]
 
-        if 'krz' in spec_file:
+        if 'krz' in spec_file.stem:
             imf = 'krou'
             mass_table = np.copy(kroupa_mass)
-        elif 'ssz' in spec_file:
+        elif 'ssz' in spec_file.stem:
             imf = 'salp'
             mass_table = np.copy(salpeter_mass)
         else:
@@ -324,12 +265,15 @@ def build_m2005(base):
                        0.0: 0.02,
                        0.35: 0.04}[metallicity]
 
-        base.add_m2005(M2005(imf, metallicity, time_grid, ssp_wave,
-                             mass_table, ssp_lumin))
+        db.add({"imf": imf, "Z": metallicity},
+               {"t": time_grid, "wl": ssp_wave, "info": mass_table,
+                "spec": ssp_lumin})
+    db.close()
 
 
-def build_bc2003(base, res):
-    bc03_dir = os.path.join(os.path.dirname(__file__), 'bc03/')
+def build_bc2003(res):
+    path = Path(__file__).parent / 'bc03'
+    db = SimpleDatabase("bc03", writable=True)
 
     # Time grid (1 Myr to 14 Gyr with 1 Myr step)
     time_grid = np.arange(1, 14000)
@@ -346,14 +290,11 @@ def build_bc2003(base, res):
     }
 
     for key, imf in itertools.product(metallicity, ["salp", "chab"]):
-        ssp_filename = "{}bc2003_{}_{}_{}_ssp.ised_ASCII".format(bc03_dir, res,
-                                                                 key, imf)
-        color3_filename = "{}bc2003_lr_{}_{}_ssp.3color".format(bc03_dir, key,
-                                                                imf)
-        color4_filename = "{}bc2003_lr_{}_{}_ssp.4color".format(bc03_dir, key,
-                                                                imf)
+        ssp_filename = path / f"bc2003_{res}_{key}_{imf}_ssp.ised_ASCII"
+        color3_filename = path / f"bc2003_lr_{key}_{imf}_ssp.3color"
+        color4_filename = path / f"bc2003_lr_{key}_{imf}_ssp.4color"
 
-        print("Importing {}...".format(ssp_filename))
+        print(f"Importing {ssp_filename}...")
 
         # Read the desired information from the color files
         color_table = []
@@ -407,17 +348,14 @@ def build_bc2003(base, res):
         ssp_lumin = np.vstack([ssp_lumin_interp[:argmin+1, :],
                                ssp_lumin_resamp])
 
-        base.add_bc03(BC03(
-            imf,
-            metallicity[key],
-            time_grid,
-            ssp_wave,
-            color_table,
-            ssp_lumin
-        ))
+        db.add({"imf": imf, "Z": metallicity[key]},
+               {"t": time_grid, "wl": ssp_wave, "info": color_table,
+                "spec": ssp_lumin})
+    db.close()
 
-def build_bc2003_ssp(base, res):
-    bc03_dir = os.path.join(os.path.dirname(__file__), 'bc03/')
+def build_bc2003_ssp(res):
+    path = Path(__file__).parent / 'bc03'
+    db = SimpleDatabase("bc03_SSP", writable=True)
 
     # Metallicities associated to each key
     metallicity = {
@@ -430,12 +368,9 @@ def build_bc2003_ssp(base, res):
     }
 
     for key, imf in itertools.product(metallicity, ["salp", "chab"]):
-        ssp_filename = "{}bc2003_{}_{}_{}_ssp.ised_ASCII".format(bc03_dir, res,
-                                                                 key, imf)
-        color3_filename = "{}bc2003_lr_{}_{}_ssp.3color".format(bc03_dir, key,
-                                                                imf)
-        color4_filename = "{}bc2003_lr_{}_{}_ssp.4color".format(bc03_dir, key,
-                                                                imf)
+        ssp_filename = path / f"bc2003_{res}_{key}_{imf}_ssp.ised_ASCII"
+        color3_filename = path / f"bc2003_lr_{key}_{imf}_ssp.3color"
+        color4_filename = path / f"bc2003_lr_{key}_{imf}_ssp.4color"
 
         print("Importing {}...".format(ssp_filename))
 
@@ -450,24 +385,21 @@ def build_bc2003_ssp(base, res):
 
         ssp_time, ssp_wave, ssp_lumin = read_bc03_ssp(ssp_filename)
 
-        base.add_bc03_ssp(BC03_SSP(
-            imf,
-            metallicity[key],
-            ssp_time,
-            ssp_wave,
-            color_table,
-            ssp_lumin
-        ))
+        db.add({"imf": imf, "Z": metallicity[key]},
+               {"t": ssp_time, "wl": ssp_wave, "info": color_table,
+                "spec": ssp_lumin})
+    db.close()
 
-def build_yggdrasil_ssp(base):
-    yggdrasil_dir = os.path.join(os.path.dirname(__file__), 'yggdrasil/')
+def build_yggdrasil_ssp():
+    path = Path(__file__).parent / 'yggdrasil'
+    db = SimpleDatabase("yggdrasil_SSP", writable=True)
 
     # Metallicities associated to each key
     metallicities = ["0.004", "0.008", "0.02"]
     fcovs = ["0", "0.5"]
 
     for Z, fcov in itertools.product(metallicities, fcovs):
-        filename = f"{yggdrasil_dir}Z={Z}_kroupa_IMF_fcov_{fcov}_SFR_inst_Spectra"
+        filename = path / f"Z={Z}_kroupa_IMF_fcov_{fcov}_SFR_inst_Spectra"
         print(f"Importing {filename}...")
 
         with open(filename) as f:
@@ -493,24 +425,26 @@ def build_yggdrasil_ssp(base):
 
         # Conversion from erg/s/Å/10⁶ Msun to W/nm/Msun
         ssp_lumin *= 1e-7 * 10 * 1e-6
-        base.add_yggdrasil_ssp(Yggdrasil_SSP(float(Z), float(fcov), ssp_time,
-                                             ssp_wave, ssp_info, ssp_lumin))
+        db.add({"Z": float(Z), "fcov":float(fcov)},
+               {"t": ssp_time, "wl": ssp_wave, "info": ssp_info,
+                "spec": ssp_lumin})
+    db.close()
 
-def build_dale2014(base):
-    models = []
-    dale2014_dir = os.path.join(os.path.dirname(__file__), 'dale2014/')
+def build_dale2014():
+    path = Path(__file__).parent / "dale2014"
+    db = SimpleDatabase("dale2014", writable=True)
 
     # Getting the alpha grid for the templates
-    d14cal = np.genfromtxt(dale2014_dir + 'dhcal.dat')
+    d14cal = np.genfromtxt(path / 'dhcal.dat')
     alpha_grid = d14cal[:, 1]
 
     # Getting the lambda grid for the templates and convert from microns to nm.
-    first_template = np.genfromtxt(dale2014_dir + 'spectra.0.00AGN.dat')
+    first_template = np.genfromtxt(path / 'spectra.0.00AGN.dat')
     wave = first_template[:, 0] * 1E3
 
     # Getting the stellar emission and interpolate it at the same wavelength
     # grid
-    stell_emission_file = np.genfromtxt(dale2014_dir +
+    stell_emission_file = np.genfromtxt(path /
                                         'stellar_SED_age13Gyr_tau10Gyr.spec')
     # A -> to nm
     wave_stell = stell_emission_file[:, 0] * 0.1
@@ -523,11 +457,10 @@ def build_dale2014(base):
 
     # Emission from dust heated by SB
     fraction = 0.0
-    filename = dale2014_dir + "spectra.0.00AGN.dat"
-    print("Importing {}...".format(filename))
-    datafile = open(filename)
-    data = "".join(datafile.readlines())
-    datafile.close()
+    filename = path / "spectra.0.00AGN.dat"
+    print(f"Importing {filename}...")
+    with filename.open() as datafile:
+        data = "".join(datafile.readlines())
 
     for al in range(1, len(alpha_grid)+1, 1):
         lumin_with_stell = np.genfromtxt(io.BytesIO(data.encode()),
@@ -540,10 +473,12 @@ def build_dale2014(base):
         norm = np.trapz(lumin, x=wave)
         lumin /= norm
 
-        models.append(Dale2014(fraction, alpha_grid[al-1], wave, lumin))
+        db.add({"fracAGN": float(fraction), "alpha": float(alpha_grid[al-1])},
+               {"wl": wave, "spec": lumin})
+
     # Emission from dust heated by AGN - Quasar template
-    filename = dale2014_dir + "shi_agn.regridded.extended.dat"
-    print("Importing {}...".format(filename))
+    filename = path / "shi_agn.regridded.extended.dat"
+    print(f"Importing {filename}...")
 
     wave, lumin_quasar = np.genfromtxt(filename, unpack=True)
     wave *= 1e3
@@ -551,14 +486,15 @@ def build_dale2014(base):
     norm = np.trapz(lumin_quasar, x=wave)
     lumin_quasar /= norm
 
-    models.append(Dale2014(1.0, 0.0, wave, lumin_quasar))
+    db.add({"fracAGN": 1.0, "alpha": 0.0},
+           {"wl": wave, "spec": lumin_quasar})
 
-    base.add_dale2014(models)
+    db.close()
 
 
-def build_dl2007(base):
-    models = []
-    dl2007_dir = os.path.join(os.path.dirname(__file__), 'dl2007/')
+def build_dl2007():
+    path = Path(__file__).parent / 'dl2007'
+    db = SimpleDatabase("dl2007", writable=True)
 
     qpah = {
         "00": 0.47,
@@ -581,12 +517,9 @@ def build_dl2007(base):
             "40": 0.0102, "50": 0.0103, "60": 0.0104}
 
     # Here we obtain the wavelength beforehand to avoid reading it each time.
-    datafile = open(dl2007_dir + "U{}/U{}_{}_MW3.1_{}.txt".format(umaximum[0],
-                                                                  umaximum[0],
-                                                                  umaximum[0],
-                                                                  "00"))
-    data = "".join(datafile.readlines()[-1001:])
-    datafile.close()
+    filename = path / "U1e3" / "U1e3_1e3_MW3.1_00.txt"
+    with filename.open() as datafile:
+        data = "".join(datafile.readlines()[-1001:])
 
     wave = np.genfromtxt(io.BytesIO(data.encode()), usecols=(0))
     # For some reason wavelengths are decreasing in the model files
@@ -599,30 +532,25 @@ def build_dl2007(base):
 
     for model in sorted(qpah.keys()):
         for umin in uminimum:
-            filename = dl2007_dir + "U{}/U{}_{}_MW3.1_{}.txt".format(umin,
-                                                                     umin,
-                                                                     umin,
-                                                                     model)
-            print("Importing {}...".format(filename))
-            datafile = open(filename)
-            data = "".join(datafile.readlines()[-1001:])
-            datafile.close()
+            filename = path / f"U{umin}" / f"U{umin}_{umin}_MW3.1_{model}.txt"
+            print(f"Importing {filename}...")
+            with filename.open() as datafile:
+                data = "".join(datafile.readlines()[-1001:])
             lumin = np.genfromtxt(io.BytesIO(data.encode()), usecols=(2))
             # For some reason fluxes are decreasing in the model files
             lumin = lumin[::-1]
             # Conversion from Jy cm² sr¯¹ H¯¹to W nm¯¹ (kg of dust)¯¹
             lumin *= conv/MdMH[model]
 
-            models.append(DL2007(qpah[model], umin, umin, wave, lumin))
+            db.add({"qpah": float(qpah[model]), "umin": float(umin),
+                    "umax": float(umin)},
+                   {"wl": wave, "spec": lumin})
             for umax in umaximum:
-                filename = dl2007_dir + "U{}/U{}_{}_MW3.1_{}.txt".format(umin,
-                                                                         umin,
-                                                                         umax,
-                                                                         model)
-                print("Importing {}...".format(filename))
-                datafile = open(filename)
-                data = "".join(datafile.readlines()[-1001:])
-                datafile.close()
+                filename = path / f"U{umin}" / \
+                    f"U{umin}_{umax}_MW3.1_{model}.txt"
+                print(f"Importing {filename}...")
+                with filename.open() as datafile:
+                    data = "".join(datafile.readlines()[-1001:])
                 lumin = np.genfromtxt(io.BytesIO(data.encode()), usecols=(2))
                 # For some reason fluxes are decreasing in the model files
                 lumin = lumin[::-1]
@@ -630,13 +558,15 @@ def build_dl2007(base):
                 # Conversion from Jy cm² sr¯¹ H¯¹to W nm¯¹ (kg of dust)¯¹
                 lumin *= conv/MdMH[model]
 
-                models.append(DL2007(qpah[model], umin, umax, wave, lumin))
-    base.add_dl2007(models)
+                db.add({"qpah": float(qpah[model]), "umin": float(umin),
+                        "umax": float(umax)},
+                       {"wl": wave, "spec": lumin})
+    db.close()
 
 
-def build_dl2014(base):
-    models = []
-    dl2014_dir = os.path.join(os.path.dirname(__file__), 'dl2014/')
+def build_dl2014():
+    path = Path(__file__).parent / 'dl2014'
+    db = SimpleDatabase("dl2014", writable=True)
 
     qpah = {"000": 0.47, "010": 1.12, "020": 1.77, "030": 2.50, "040": 3.19,
             "050": 3.90, "060": 4.58, "070": 5.26, "080": 5.95, "090": 6.63,
@@ -659,12 +589,9 @@ def build_dl2014(base):
             "080": 0.0106, "090": 0.0107, "100": 0.0108}
 
     # Here we obtain the wavelength beforehand to avoid reading it each time.
-    datafile = open(dl2014_dir + "U{}_{}_MW3.1_{}/spec_1.0.dat"
-                    .format(uminimum[0], uminimum[0], "000"))
-
-    data = "".join(datafile.readlines()[-1001:])
-    datafile.close()
-
+    filename = path / "U0.100_0.100_MW3.1_000" / "spec_1.0.dat"
+    with filename.open() as datafile:
+        data = "".join(datafile.readlines()[-1001:])
     wave = np.genfromtxt(io.BytesIO(data.encode()), usecols=(0))
     # For some reason wavelengths are decreasing in the model files
     wave = wave[::-1]
@@ -676,10 +603,9 @@ def build_dl2014(base):
 
     for model in sorted(qpah.keys()):
         for umin in uminimum:
-            filename = (dl2014_dir + "U{}_{}_MW3.1_{}/spec_1.0.dat"
-                        .format(umin, umin, model))
-            print("Importing {}...".format(filename))
-            with open(filename) as datafile:
+            filename = path / f"U{umin}_{umin}_MW3.1_{model}" / "spec_1.0.dat"
+            print(f"Importing {filename}...")
+            with filename.open() as datafile:
                 data = "".join(datafile.readlines()[-1001:])
             lumin = np.genfromtxt(io.BytesIO(data.encode()), usecols=(2))
             # For some reason fluxes are decreasing in the model files
@@ -688,12 +614,15 @@ def build_dl2014(base):
             # Conversion from Jy cm² sr¯¹ H¯¹to W nm¯¹ (kg of dust)¯¹
             lumin *= conv/MdMH[model]
 
-            models.append(DL2014(qpah[model], umin, umin, 1.0, wave, lumin))
+            db.add({"qpah": float(qpah[model]), "umin": float(umin),
+                    "umax": float(umin), "alpha": 1.0},
+                   {"wl": wave, "spec": lumin})
+
             for al in alpha:
-                filename = (dl2014_dir + "U{}_1e7_MW3.1_{}/spec_{}.dat"
-                            .format(umin, model, al))
-                print("Importing {}...".format(filename))
-                with open(filename) as datafile:
+                filename = path / f"U{umin}_1e7_MW3.1_{model}" / \
+                    f"spec_{al}.dat"
+                print(f"Importing {filename}...")
+                with filename.open() as datafile:
                     data = "".join(datafile.readlines()[-1001:])
                 lumin = np.genfromtxt(io.BytesIO(data.encode()), usecols=(2))
                 # For some reason fluxes are decreasing in the model files
@@ -702,29 +631,29 @@ def build_dl2014(base):
                 # Conversion from Jy cm² sr¯¹ H¯¹to W nm¯¹ (kg of dust)¯¹
                 lumin *= conv/MdMH[model]
 
-                models.append(DL2014(qpah[model], umin, 1e7, al, wave, lumin))
+                db.add({"qpah": float(qpah[model]), "umin": float(umin),
+                        "umax": 1e7, "alpha": float(al)},
+                       {"wl": wave, "spec": lumin})
+    db.close()
 
-    base.add_dl2014(models)
 
-def build_fritz2006(base):
-    models = []
-    fritz2006_dir = os.path.join(os.path.dirname(__file__), 'fritz2006/')
+def build_fritz2006():
+    path = Path(__file__).parent / "fritz2006"
+    db = SimpleDatabase("fritz2006", writable=True)
 
     # Parameters of Fritz+2006
-    psy = [0.001, 10.100, 20.100, 30.100, 40.100, 50.100, 60.100, 70.100,
-           80.100, 89.990]  # Viewing angle in degrees
-    opening_angle = ["20", "40", "60"]  # Theta = 2*(90 - opening_angle)
+    psy = ["0.001", "10.100", "20.100", "30.100", "40.100", "50.100", "60.100",
+           "70.100", "80.100", "89.990"]  # Viewing angle in degrees
+    opening_angle = [20, 40, 60]  # Theta = 2*(90 - opening_angle)
     gamma = ["0.0", "2.0", "4.0", "6.0"]
     beta = ["-1.00", "-0.75", "-0.50", "-0.25", "0.00"]
     tau = ["0.1", "0.3", "0.6", "1.0", "2.0", "3.0", "6.0", "10.0"]
-    r_ratio = ["10", "30", "60", "100", "150"]
+    r_ratio = [10, 30, 60, 100, 150]
 
     # Read and convert the wavelength
-    datafile = open(fritz2006_dir + "ct{}al{}be{}ta{}rm{}.tot"
-                    .format(opening_angle[0], gamma[0], beta[0], tau[0],
-                            r_ratio[0]))
-    data = "".join(datafile.readlines()[-178:])
-    datafile.close()
+    filename = path / "ct20al0.0be-1.00ta0.1rm10.tot"
+    with filename.open() as datafile:
+        data = "".join(datafile.readlines()[-178:])
     wave = np.genfromtxt(io.BytesIO(data.encode()), usecols=(0))
     wave *= 1e3
     # Number of wavelengths: 178; Number of comments lines: 28
@@ -739,14 +668,13 @@ def build_fritz2006(base):
                    for rm in r_ratio)
 
     for params in iter_params:
-        filename = fritz2006_dir + "ct{}al{}be{}ta{}rm{}.tot".format(*params)
-        print("Importing {}...".format(filename))
+        filename = path / "ct{}al{}be{}ta{}rm{}.tot".format(*params)
+        print(f"Importing {filename}...")
         try:
-            datafile = open(filename)
+            with filename.open() as datafile:
+                data = datafile.readlines()
         except IOError:
             continue
-        data = datafile.readlines()
-        datafile.close()
 
         for n in range(len(psy)):
             block = data[nskip + blocksize * n + 4 * (n + 1) - 1:
@@ -768,30 +696,80 @@ def build_fritz2006(base):
             lumin_scatt /= norm
             lumin_agn /= norm
 
-            models.append(Fritz2006(params[4], params[3], params[2],
-                                         params[1], params[0], psy[n], wave,
-                                         lumin_therm, lumin_scatt, lumin_agn))
 
-    base.add_fritz2006(models)
+            db.add({"r_ratio": float(params[4]), "tau": float(params[3]),
+                    "beta": float(params[2]), "gamma": float(params[1]),
+                    "opening_angle": float(params[0]), "psy": float(psy[n])},
+                   {"wl": wave, "spec_therm": lumin_therm,
+                    "spec_scatt": lumin_scatt, "spec_agn": lumin_agn})
+    db.close()
 
-def build_nebular(base):
-    models_lines = []
-    models_cont = []
+def build_skirtor2016():
+    path = Path(__file__).parent / "skirtor2016"
+    db = SimpleDatabase("skirtor2016", writable=True)
 
-    nebular_dir = os.path.join(os.path.dirname(__file__), 'nebular/')
-    print("Importing {}...".format(nebular_dir + 'lines.dat'))
-    lines = np.genfromtxt(nebular_dir + 'lines.dat')
+    params = [f.stem.split('_')[:-1] for f in path.glob('*')]
 
-    tmp = Table.read(nebular_dir + 'line_wavelengths.dat', format='ascii')
+    # Parameters of SKIRTOR 2016
+    t = list({param[0][1:] for param in params})
+    p = list({param[1][1:] for param in params})
+    q = list({param[2][1:] for param in params})
+    oa = list({param[3][2:] for param in params})
+    R = list({param[4][1:] for param in params})
+    Mcl = list({param[5][3:] for param in params})
+    i = list({param[6][1:] for param in params})
+
+    iter_params = ((p1, p2, p3, p4, p5, p6, p7)
+                   for p1 in t
+                   for p2 in p
+                   for p3 in q
+                   for p4 in oa
+                   for p5 in R
+                   for p6 in Mcl
+                   for p7 in i)
+
+    for params in iter_params:
+        filename = path / \
+                "t{}_p{}_q{}_oa{}_R{}_Mcl{}_i{}_sed.dat".format(*params)
+        print(f"Importing {filename}...")
+
+        wl, disk, scatt, dust = np.genfromtxt(filename, unpack=True,
+                                              usecols=(0, 2, 3, 4))
+        wl *= 1e3
+        disk += scatt
+        disk /= wl
+        dust /= wl
+
+        # Normalization of the lumin_therm to 1W
+        norm = np.trapz(dust, x=wl)
+        disk /= norm
+        dust /= norm
+
+        db.add({"t": int(params[0]), "pl": float(params[1]),
+                "q": float(params[2]), "oa": int(params[3]),
+                "R": int(params[4]), "Mcl": float(params[5]),
+                "i": int(params[6])},
+               {"norm": norm, "wl": wl, "disk": disk, "dust": dust})
+    db.close()
+
+def build_nebular():
+    path = Path(__file__).parent / "nebular"
+
+    filename = path / "lines.dat"
+    print(f"Importing {filename}...")
+    lines = np.genfromtxt(filename)
+
+    tmp = Table.read(path / "line_wavelengths.dat", format='ascii')
     wave_lines = tmp['col1'].data
     name_lines = tmp['col2'].data
 
-    print("Importing {}...".format(nebular_dir + 'continuum.dat'))
-    cont = np.genfromtxt(nebular_dir + 'continuum.dat')
+    filename = path / "continuum.dat"
+    print(f"Importing {filename}...")
+    cont = np.genfromtxt(filename)
 
     # Convert wavelength from Å to nm
     wave_lines *= 0.1
-    wave_cont = cont[:1600, 0] * 0.1
+    wave_cont = cont[:3729, 0] * 0.1
 
     # Get the list of metallicities
     metallicities = np.unique(lines[:, 1])
@@ -812,34 +790,37 @@ def build_nebular(base):
                     metallicities.size)[:, np.newaxis]
 
     # Import lines
+    db = SimpleDatabase("nebular_lines", writable=True)
     for idx, metallicity in enumerate(metallicities):
         spectra = lines[idx::6, :]
         for logU, spectrum in zip(np.around(np.arange(-4., -.9, .1), 1),
                                   spectra.T):
-            models_lines.append(NebularLines(metallicity, logU, name_lines,
-                                             wave_lines, spectrum))
+            db.add({"Z": float(metallicity), "logU": float(logU)},
+                   {"name": name_lines, "wl": wave_lines, "spec": spectrum})
+    db.close()
 
     # Import continuum
+    db = SimpleDatabase("nebular_continuum", writable=True)
     for idx, metallicity in enumerate(metallicities):
-        spectra = cont[1600 * idx: 1600 * (idx+1), :]
+        spectra = cont[3729 * idx: 3729 * (idx+1), :]
         for logU, spectrum in zip(np.around(np.arange(-4., -.9, .1), 1),
                                   spectra.T):
-            models_cont.append(NebularContinuum(metallicity, logU, wave_cont,
-                                                spectrum))
-
-    base.add_nebular_lines(models_lines)
-    base.add_nebular_continuum(models_cont)
+            db.add({"Z": float(metallicity), "logU": float(logU)},
+                   {"wl": wave_cont, "spec": spectrum})
+    db.close()
 
 
-def build_schreiber2016(base):
-    models = []
-    schreiber2016_dir = os.path.join(os.path.dirname(__file__),
-                                     'schreiber2016/')
+def build_schreiber2016():
+    path = Path(__file__).parent / "schreiber2016"
+    db = SimpleDatabase("schreiber2016", writable=True)
 
-    print("Importing {}...".format(schreiber2016_dir + 'g15_pah.fits'))
-    pah = Table.read(schreiber2016_dir + 'g15_pah.fits')
-    print("Importing {}...".format(schreiber2016_dir + 'g15_dust.fits'))
-    dust = Table.read(schreiber2016_dir + 'g15_dust.fits')
+    filename = path / "g15_pah.fits"
+    print(f"Importing {filename}...")
+    pah = Table.read(filename)
+
+    filename = path / "g15_dust.fits"
+    print(f"Importing {filename}...")
+    dust = Table.read(filename)
 
     # Getting the lambda grid for the templates and convert from μm to nm.
     wave = dust['LAM'][0, 0, :].data * 1e3
@@ -852,15 +833,17 @@ def build_schreiber2016(base):
         lumin_dust = dust['SED'][0, tsed, :].data / wave
         lumin_pah = pah['SED'][0, tsed, :].data / wave
 
-        models.append(Schreiber2016(0, td, wave, lumin_dust))
-        models.append(Schreiber2016(1, td, wave, lumin_pah))
+        db.add({"type": 0, "tdust": float(td)},
+               {"wl": wave, "spec": lumin_dust})
+        db.add({"type": 1, "tdust": float(td)},
+               {"wl": wave, "spec": lumin_pah})
 
-    base.add_schreiber2016(models)
+    db.close()
 
 
-def build_themis(base):
-    models = []
-    themis_dir = os.path.join(os.path.dirname(__file__), 'themis/')
+def build_themis():
+    path = Path(__file__).parent / "themis"
+    db = SimpleDatabase("themis", writable=True)
 
     # Mass fraction of hydrocarbon solids i.e., a-C(:H) smaller than 1.5 nm,
     # also known as HAC
@@ -885,11 +868,9 @@ def build_themis(base):
             "080": 7.4e-3, "090": 7.4e-3, "100": 7.4e-3}
 
     # Here we obtain the wavelength beforehand to avoid reading it each time.
-    datafile = open(themis_dir + "U{}_{}_MW3.1_{}/spec_1.0.dat"
-                    .format(uminimum[0], uminimum[0], "000"))
-
-    data = "".join(datafile.readlines()[-576:])
-    datafile.close()
+    filename = path / "U0.100_0.100_MW3.1_000" / "spec_1.0.dat"
+    with filename.open() as datafile:
+        data = "".join(datafile.readlines()[-576:])
 
     wave = np.genfromtxt(io.BytesIO(data.encode()), usecols=(0))
 
@@ -901,9 +882,8 @@ def build_themis(base):
 
     for model in sorted(qhac.keys()):
         for umin in uminimum:
-            filename = (themis_dir + "U{}_{}_MW3.1_{}/spec_1.0.dat"
-                        .format(umin, umin, model))
-            print("Importing {}...".format(filename))
+            filename = path / f"U{umin}_{umin}_MW3.1_{model}" / "spec_1.0.dat"
+            print(f"Importing {filename}...")
             with open(filename) as datafile:
                 data = "".join(datafile.readlines()[-576:])
             lumin = np.genfromtxt(io.BytesIO(data.encode()), usecols=(2))
@@ -911,11 +891,13 @@ def build_themis(base):
             # Conversion from Jy cm² sr¯¹ H¯¹to W nm¯¹ (kg of dust)¯¹
             lumin *= conv / MdMH[model]
 
-            models.append(THEMIS(qhac[model], umin, umin, 1.0, wave, lumin))
+            db.add({"qhac": float(qhac[model]), "umin": float(umin),
+                    "umax": float(umin), "alpha": 1.0},
+                   {"wl": wave, "spec": lumin})
             for al in alpha:
-                filename = (themis_dir + "U{}_1e7_MW3.1_{}/spec_{}.dat"
-                            .format(umin, model, al))
-                print("Importing {}...".format(filename))
+                filename = path / f"U{umin}_1e7_MW3.1_{model}" / \
+                    f"spec_{al}.dat"
+                print(f"Importing {filename}...")
                 with open(filename) as datafile:
                     data = "".join(datafile.readlines()[-576:])
                 lumin = np.genfromtxt(io.BytesIO(data.encode()), usecols=(2))
@@ -923,74 +905,75 @@ def build_themis(base):
                 # Conversion from Jy cm² sr¯¹ H¯¹to W nm¯¹ (kg of dust)¯¹
                 lumin *= conv/MdMH[model]
 
-                models.append(THEMIS(qhac[model], umin, 1e7, al, wave, lumin))
-
-    base.add_themis(models)
+                db.add({"qhac": float(qhac[model]), "umin": float(umin),
+                        "umax": 1e7, "alpha": float(al)},
+                       {"wl": wave, "spec": lumin})
+    db.close()
 
 
 def build_base(bc03res='lr'):
-    base = Database(writable=True)
-    base.upgrade_base()
-
     print('#' * 78)
     print("1- Importing filters...\n")
-    build_filters(base)
-    build_filters_gazpar(base)
+    #build_filters()
     print("\nDONE\n")
     print('#' * 78)
 
     print("2- Importing Maraston 2005 SSP\n")
-    build_m2005(base)
+    build_m2005()
     print("\nDONE\n")
     print('#' * 78)
 
     print("3- Importing Bruzual and Charlot 2003 SSP\n")
-    build_bc2003_ssp(base, bc03res)
-    build_bc2003(base, bc03res)
+    build_bc2003_ssp(bc03res)
+    build_bc2003(bc03res)
     print("\nDONE\n")
     print('#' * 78)
 
-    print("4- Importing Draine and Li (2007) models\n")
-    build_dl2007(base)
+    print("4- Importing nebular lines and continuum\n")
+    build_nebular()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("5- Importing the updated Draine and Li (2007 models)\n")
-    build_dl2014(base)
+    print("5- Importing Draine and Li (2007) models\n")
+    build_dl2007()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("6- Importing Fritz et al. (2006) models\n")
-    build_fritz2006(base)
+    print("6- Importing the updated Draine and Li (2007) models\n")
+    build_dl2014()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("7- Importing Dale et al (2014) templates\n")
-    build_dale2014(base)
+    print("7- Importing Jones et al (2017) models)\n")
+    build_themis()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("8- Importing nebular lines and continuum\n")
-    build_nebular(base)
+    print("8- Importing Dale et al (2014) templates\n")
+    build_dale2014()
     print("\nDONE\n")
     print('#' * 78)
 
     print("9- Importing Schreiber et al (2016) models\n")
-    build_schreiber2016(base)
+    build_schreiber2016()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("10- Importing Jones et al (2017) models)\n")
-    build_themis(base)
+    print("10- Importing Fritz et al. (2006) models\n")
+    build_fritz2006()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("11- Importing the Yggdrasil SSP")
-    build_yggdrasil_ssp(base)
+    print("11- Importing SKIRTOR 2016 models\n")
+    build_skirtor2016()
     print("\nDONE\n")
     print('#' * 78)
 
-    base.session.close_all()
+    print("12- Importing the Yggdrasil SSP")
+    build_yggdrasil_ssp()
+    print("\nDONE\n")
+    print('#' * 78)
+
 
 
 if __name__ == '__main__':

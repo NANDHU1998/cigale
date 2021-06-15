@@ -12,7 +12,7 @@ from collections import OrderedDict
 import numpy as np
 
 from . import SedModule
-from ..data import Database
+from ..data import SimpleDatabase as Database
 
 
 class YggdrasilSSP(SedModule):
@@ -43,9 +43,8 @@ class YggdrasilSSP(SedModule):
         self.fcov = float(self.parameters["fcov"])
         self.separation_age = int(self.parameters["separation_age"])
 
-        with Database() as database:
-            self.ssp = database.get_yggdrasil_ssp(self.metallicity,
-                                                  self.fcov)
+        with Database("yggdrasil_SSP") as db:
+            self.ssp = db.get(Z=self.metallicity, fcov=self.fcov)
 
     def process(self, sed):
         """Add the convolution of a Bruzual and Charlot SSP to the SED
@@ -61,19 +60,19 @@ class YggdrasilSSP(SedModule):
         else:
             raise Exception('The stellar models do not correspond to pure SSP.')
 
-        if self.ssp.time_grid[index] <= self.separation_age:
-            spec_young = self.ssp.spec_table[:, index]
-            info_young = self.ssp.info_table[index]
+        if self.ssp.t[index] <= self.separation_age:
+            spec_young = self.ssp.spec[:, index]
+            info_young = self.ssp.info[index]
             spec_old = np.zeros_like(spec_young)
             info_old = np.zeros_like(info_young)
         else:
-            spec_old = self.ssp.spec_table[:, index]
-            info_old = self.ssp.info_table[index]
+            spec_old = self.ssp.spec[:, index]
+            info_old = self.ssp.info[index]
             spec_young = np.zeros_like(spec_old)
             info_young = np.zeros_like(info_old)
         info_all = info_young + info_old
 
-        wave = self.ssp.wavelength_grid
+        wave = self.ssp.wl
         lum_young, lum_old = np.trapz([spec_young, spec_old], wave)
 
         sed.add_module(self.name, self.parameters)
@@ -81,7 +80,7 @@ class YggdrasilSSP(SedModule):
         sed.add_info("stellar.metallicity", self.metallicity)
         sed.add_info("stellar.fcov", self.fcov)
         sed.add_info("stellar.old_young_separation_age", self.separation_age)
-        sed.add_info("stellar.age", self.ssp.time_grid[index])
+        sed.add_info("stellar.age", self.ssp.t[index])
 
         sed.add_info("stellar.m_star_young", info_young, True)
         sed.add_info("stellar.lum_young", lum_young, True)

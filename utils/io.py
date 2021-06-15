@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2014 Yannick Roehlly
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 Various utility function for pcigale
 """
+from functools import lru_cache
 
 from astropy.table import Table
 from astropy.io.ascii.core import InconsistentTableError
 
-
+@lru_cache
 def read_table(file_):
     """Read a data table using astropy
 

@@ -12,7 +12,7 @@ from collections import OrderedDict
 import numpy as np
 
 from . import SedModule
-from ..data import Database
+from ..data import SimpleDatabase as Database
 
 
 class BC03SSP(SedModule):
@@ -45,11 +45,11 @@ class BC03SSP(SedModule):
         self.metallicity = float(self.parameters["metallicity"])
         self.separation_age = int(self.parameters["separation_age"])
 
-        with Database() as database:
+        with Database("bc03_SSP") as db:
             if self.imf == 0:
-                self.ssp = database.get_bc03_ssp('salp', self.metallicity)
+                self.ssp = db.get(imf='salp', Z=self.metallicity)
             elif self.imf == 1:
-                self.ssp = database.get_bc03_ssp('chab', self.metallicity)
+                self.ssp = db.get(imf='chab', Z=self.metallicity)
             else:
                 raise Exception("IMF #{} unknown".format(self.imf))
 
@@ -67,14 +67,14 @@ class BC03SSP(SedModule):
         else:
             raise Exception('The stellar models do not correspond to pure SSP.')
 
-        if self.ssp.time_grid[index] <= self.separation_age:
-            spec_young = self.ssp.spec_table[:, index]
-            info_young = self.ssp.info_table[:, index]
+        if self.ssp.t[index] <= self.separation_age:
+            spec_young = self.ssp.spec[:, index]
+            info_young = self.ssp.info[:, index]
             spec_old = np.zeros_like(spec_young)
             info_old = np.zeros_like(info_young)
         else:
-            spec_old = self.ssp.spec_table[:, index]
-            info_old = self.ssp.info_table[:, index]
+            spec_old = self.ssp.spec[:, index]
+            info_old = self.ssp.info[:, index]
             spec_young = np.zeros_like(spec_old)
             info_young = np.zeros_like(info_old)
         info_all = info_young + info_old
@@ -84,7 +84,7 @@ class BC03SSP(SedModule):
         info_all = dict(zip(["m_star", "m_gas", "n_ly"], info_all))
         # We compute the Lyman continuum luminosity as it is important to
         # compute the energy absorbed by the dust before ionising gas.
-        wave = self.ssp.wavelength_grid
+        wave = self.ssp.wl
         w = np.where(wave <= 91.1)
         lum_lyc_young, lum_lyc_old = np.trapz([spec_young[w], spec_old[w]],
                                               wave[w])
@@ -97,7 +97,7 @@ class BC03SSP(SedModule):
         sed.add_info("stellar.imf", self.imf)
         sed.add_info("stellar.metallicity", self.metallicity)
         sed.add_info("stellar.old_young_separation_age", self.separation_age)
-        sed.add_info("stellar.age", self.ssp.time_grid[index])
+        sed.add_info("stellar.age", self.ssp.t[index])
 
         sed.add_info("stellar.m_star_young", info_young["m_star"], True)
         sed.add_info("stellar.m_gas_young", info_young["m_gas"], True)

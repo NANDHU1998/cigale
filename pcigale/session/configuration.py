@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
-from collections import OrderedDict
 import multiprocessing as mp
-import os.path
+from pathlib import Path
 import sys
 from textwrap import wrap
 
@@ -15,7 +9,7 @@ import numpy as np
 import validate
 
 from ..managers.parameters import ParametersManager
-from ..data import Database
+from ..data import SimpleDatabase as Database
 from utils.io import read_table
 from .. import sed_modules
 from .. import analysis_modules
@@ -23,37 +17,49 @@ from ..warehouse import SedWarehouse
 from . import validation
 from pcigale.sed_modules.nebular import default_lines
 
-class Configuration(object):
+
+class Configuration:
     """This class manages the configuration of pcigale.
     """
 
-    def __init__(self, filename="pcigale.ini"):
+    def __init__(self, filename=Path("pcigale.ini")):
         """Initialise a pcigale configuration.
 
         Parameters
         ----------
-        filename: string
+        filename: Path
             Name of the configuration file (pcigale.conf by default).
 
         """
-        self.spec = configobj.ConfigObj(filename+'.spec',
-                                        write_empty_values=True,
-                                        indent_type='  ',
-                                        encoding='UTF8',
-                                        list_values=False,
-                                        _inspec=True)
-        self.config = configobj.ConfigObj(filename,
-                                          write_empty_values=True,
-                                          indent_type='  ',
-                                          encoding='UTF8',
-                                          configspec=self.spec)
+        # We should never be in the case when there is a pcigale.ini but no
+        # pcigale.ini.spec. While this seems to work when doing the pcigale
+        # genconf, it actually generates an incorrect pcigale.ini.spec. The only
+        # clean solution is to rebuild both files.
+        if filename.is_file() and not filename.with_suffix('.ini.spec').is_file():
+            raise Exception("The pcigale.ini.spec file appears to be missing. "
+                            "Please delete the pcigale.ini file and regenrate "
+                            "it with 'pcigale init' and then 'pcigale genconf' "
+                            "after having filled the initial pcigale.ini "
+                            "template.")
+        else:
+            self.spec = configobj.ConfigObj(filename.with_suffix('.ini.spec').name,
+                                            write_empty_values=True,
+                                            indent_type='  ',
+                                            encoding='UTF8',
+                                            list_values=False,
+                                            _inspec=True)
+            self.config = configobj.ConfigObj(filename.name,
+                                              write_empty_values=True,
+                                              indent_type='  ',
+                                              encoding='UTF8',
+                                              configspec=self.spec)
 
         # We validate the configuration so that the variables are converted to
         # the expected that. We do not handle errors at the point but only when
         # we actually return the configuration file from the property() method.
         self.config.validate(validate.Validator(validation.functions))
 
-        self.pcigaleini_exists = os.path.isfile(filename)
+        self.pcigaleini_exists = filename.is_file()
 
     def create_blank_conf(self):
         """Create the initial configuration file
@@ -93,26 +99,27 @@ class Configuration(object):
 
         self.config['sed_modules'] = []
         self.config.comments['sed_modules'] = ([""] +
-            ["Avaiable modules to compute the models. The order must be kept."
-            ] +
+            ["Available modules to compute the models. The order must be kept."
+             ] +
             ["SFH:"] +
             ["* sfh2exp (double exponential)"] +
             ["* sfhdelayed (delayed SFH with optional exponential burst)"] +
             ["* sfhdelayedbq (delayed SFH with optional constant burst/quench)"
-            ] +
+             ] +
             ["* sfhfromfile (arbitrary SFH read from an input file)"] +
             ["* sfhperiodic (periodic SFH, exponential, rectangle or delayed"
              ")"] +
             ["SSP:"] +
             ["* bc03 (Bruzual and Charlot 2003)"] +
-            ["* m2005 (Maraston 2005)"] +
+            ["* m2005 (Maraston 2005; note that it cannot be combined with the "
+             "nebular module)"] +
             ["Nebular emission:"] +
             ["* nebular (continuum and line nebular emission)"] +
             ["Dust attenuation:"] +
             ["* dustatt_modified_CF00 (modified Charlot & Fall 2000 "
              "attenuation law)"] +
-            ["* dustatt_modified_starburst (modified starburst attenuaton law)"
-            ] +
+            ["* dustatt_modified_starburst (modified Calzetti 2000 attenuaton "
+             "law)"] +
             ["Dust emission:"] +
             ["* casey2012 (Casey 2012 dust emission models)"] +
             ["* dale2014 (Dale et al. 2014 dust emission templates)"] +
@@ -121,10 +128,11 @@ class Configuration(object):
             ["* themis (Themis dust emission models from Jones et al. 2017)"] +
             ["AGN:"] +
             ["* fritz2006 (AGN models from Fritz et al. 2006)"] +
+            ["* skirtor2016 (AGN models from Stalevski et al. 2012, 2016)"] +
             ["Radio:"] +
             ["* radio (synchrotron emission)"] +
             ["Restframe parameters:"] +
-            ["* restframe_parameters (UV slope, IRX-beta, D4000, EW, etc.)"] +
+            ["* restframe_parameters (UV slope (β), IRX, D4000, EW, etc.)"] +
             ["Redshift+IGM:"] +
             ["* redshifting (mandatory, also includes the IGM from Meiksin "
              "2006)"]
@@ -159,8 +167,8 @@ class Configuration(object):
             sys.exit(1)
 
         # Getting the list of the filters available in pcigale database
-        with Database() as base:
-            filter_list = base.get_filter_names()
+        with Database("filters") as db:
+            filter_list = db.parameters["name"]
         filter_list += [f'line.{line}' for line in default_lines]
 
         if self.config['data_file'] != '':
@@ -271,7 +279,7 @@ class Configuration(object):
             sys.exit(1)
 
         self.complete_redshifts()
-        self.complete_analysed_parameters()
+        self.check_and_complete_analysed_parameters()
 
         vdt = validate.Validator(validation.functions)
         validity = self.config.validate(vdt, preserve_errors=True)
@@ -298,23 +306,21 @@ class Configuration(object):
         unofficial module that is not in our list
         """
 
-        modules = OrderedDict((('SFH', ['sfh2exp', 'sfhdelayed', 'sfhdelayedbq',
-                                        'sfhfromfile', 'sfhperiodic']),
-                               ('SSP', ['bc03', 'm2005']),
-                               ('nebular', ['nebular']),
-                               ('dust attenuation', ['dustatt_calzleit',
-                                                     'dustatt_powerlaw',
-                                                     'dustatt_2powerlaws',
-                                                     'dustatt_modified_CF00',
-                                                     'dustatt_modified_starburst']),
-                               ('dust emission', ['casey2012', 'dale2014',
-                                                  'dl2007', 'dl2014',
-                                                  'themis']),
-                               ('AGN', ['dale2014', 'fritz2006']),
-                               ('radio', ['radio']),
-                               ('restframe_parameters',
-                                ['restframe_parameters']),
-                               ('redshift', ['redshifting'])))
+        modules = {'SFH': ['sfh2exp', 'sfhdelayed', 'sfhdelayedbq',
+                           'sfhfromfile', 'sfhperiodic'],
+                   'SSP': ['bc03', 'm2005'],
+                   'nebular': ['nebular'],
+                   'dust attenuation': ['dustatt_calzleit', 'dustatt_powerlaw',
+                                        'dustatt_2powerlaws',
+                                        'dustatt_modified_CF00',
+                                        'dustatt_modified_starburst'],
+                   'dust emission': ['casey2012', 'dale2014', 'dl2007',
+                                     'dl2014', 'themis'],
+                   'AGN': ['fritz2006', 'skirtor2016'],
+                   'radio': ['radio'],
+                   'restframe_parameters': ['restframe_parameters'],
+                   'redshift': ['redshifting']
+                   }
 
         comments = {'SFH': "ERROR! Choosing one SFH module is mandatory.",
                     'SSP': "ERROR! Choosing one SSP module is mandatory.",
@@ -361,13 +367,21 @@ class Configuration(object):
                 raise Exception("No flux file and no redshift indicated. "
                                 "The spectra cannot be computed. Aborting.")
 
-    def complete_analysed_parameters(self):
-        """Complete the configuration when the variables are missing from the
-        configuration file and must be extracted from a dummy run."""
-        if not self.config['analysis_params']['variables']:
-            warehouse = SedWarehouse()
-            params = ParametersManager(self.config.dict())
-            sed = warehouse.get_sed(params.modules, params.from_index(0))
-            info = list(sed.info.keys())
+    def check_and_complete_analysed_parameters(self):
+        """Check that the variables to be analysed are indeed computed and if "
+        "no variable is given, complete the configuration with all the "
+        "variables extracted from a dummy run."""
+        params = ParametersManager(self.config.dict())
+        sed = SedWarehouse().get_sed(params.modules, params.from_index(0))
+        info = list(sed.info.keys())
+
+        if len(self.config['analysis_params']['variables']) > 0:
+            nolog = [k if not k.endswith('_log') else k[:-4]
+                     for k in self.config['analysis_params']['variables']]
+            diff = set(nolog) - set(info)
+            if len(diff) > 0:
+                raise Exception(f"{', '.join(diff)} unknown. "
+                                f"Available variables are: {', '.join(info)}.")
+        else:
             info.sort()
             self.config['analysis_params']['variables'] = info

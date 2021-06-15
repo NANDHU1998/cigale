@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly, Denis Burgarella
-
 """
 Calzetti et al. (2000) and Leitherer et al. (2002) attenuation module
 =====================================================================
@@ -12,8 +6,6 @@ This module implements the Calzetti et al. (2000) and  Leitherer et al. (2002)
 attenuation formulae, adding an UV-bump and a power law.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 
@@ -172,7 +164,7 @@ def a_vs_ebv(wavelength, bump_wave, bump_width, bump_ampl, power_slope):
                 uv_bump(wl_BV, bump_wave, bump_width, bump_ampl))
     EBV = ((k_calzetti2000(wl_BV) * power_law(wl_BV, power_slope)) +
            uv_bump(wl_BV, bump_wave, bump_width, bump_ampl))
-    attenuation *= (EBV_calz[1]-EBV_calz[0]) / (EBV[1]-EBV[0])
+    attenuation *= (EBV_calz[1] - EBV_calz[0]) / (EBV[1] - EBV[0])
 
     # UV bump. It is added after the renormalization as the bump strength
     # should correspond to the requested E(B-V) and should therefore not be
@@ -195,47 +187,47 @@ class CalzLeit(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("E_BVs_young", (
+    parameter_list = {
+        "E_BVs_young": (
             "cigale_list(minvalue=0.)",
             "E(B-V)*, the colour excess of the stellar continuum light for "
             "the young population.",
             0.3
-        )),
-        ("E_BVs_old_factor", (
+        ),
+        "E_BVs_old_factor": (
             "cigale_list(minvalue=0., maxvalue=1.)",
             "Reduction factor for the E(B-V)* of the old population compared "
             "to the young one (<1).",
             1.0
-        )),
-        ("uv_bump_wavelength", (
+        ),
+        "uv_bump_wavelength": (
             "cigale_list(minvalue=0.)",
             "Central wavelength of the UV bump in nm.",
             217.5
-        )),
-        ("uv_bump_width", (
+        ),
+        "uv_bump_width": (
             "cigale_list()",
             "Width (FWHM) of the UV bump in nm.",
             35.
-        )),
-        ("uv_bump_amplitude", (
+        ),
+        "uv_bump_amplitude": (
             "cigale_list(minvalue=0.)",
             "Amplitude of the UV bump. For the Milky Way: 3.",
             0.
-        )),
-        ("powerlaw_slope", (
+        ),
+        "powerlaw_slope": (
             "cigale_list()",
             "Slope delta of the power law modifying the attenuation curve.",
             0.
-        )),
-        ("filters", (
+        ),
+        "filters": (
             "string()",
             "Filters for which the attenuation will be computed and added to "
             "the SED information dictionary. You can give several filter "
             "names separated by a & (don't use commas).",
             "B_B90 & V_B90 & FUV"
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         """Get the filters from the database"""
@@ -290,11 +282,11 @@ class CalzLeit(SedModule):
                 self.lineatt[name] = (old, young)
 
         attenuation_total = 0.
-        contribs = [contrib for contrib in sed.contribution_names if
+        contribs = [contrib for contrib in sed.luminosities if
                     'absorption' not in contrib]
         for contrib in contribs:
             age = contrib.split('.')[-1].split('_')[-1]
-            luminosity = sed.get_lumin_contribution(contrib)
+            luminosity = sed.luminosities[contrib]
             attenuation_spectrum = luminosity * (self.contatt[age] - 1.)
             # We integrate the amount of luminosity attenuated (-1 because the
             # spectrum is negative).
@@ -304,8 +296,10 @@ class CalzLeit(SedModule):
             attenuation_total += attenuation
 
             sed.add_module(self.name, self.parameters)
-            sed.add_info("attenuation.E_BVs." + contrib, self.ebvs[age])
-            sed.add_info("attenuation." + contrib, attenuation, True)
+            sed.add_info("attenuation.E_BVs." + contrib, self.ebvs[age],
+                         unit='mag')
+            sed.add_info("attenuation." + contrib, attenuation, True,
+                         unit='mag')
             sed.add_contribution("attenuation." + contrib, wavelength,
                                  attenuation_spectrum)
 
@@ -316,10 +310,10 @@ class CalzLeit(SedModule):
         # Total attenuation
         if 'dust.luminosity' in sed.info:
             sed.add_info("dust.luminosity",
-                         sed.info["dust.luminosity"]+attenuation_total, True,
-                         True)
+                         sed.info["dust.luminosity"] + attenuation_total, True,
+                         True, unit='W')
         else:
-            sed.add_info("dust.luminosity", attenuation_total, True)
+            sed.add_info("dust.luminosity", attenuation_total, True, unit='W')
 
         # Fλ fluxes (only from continuum) in each filter after attenuation.
         flux_att = {filt: sed.compute_fnu(filt) for filt in self.filter_list}
@@ -327,11 +321,13 @@ class CalzLeit(SedModule):
         # Attenuation in each filter
         for filt in self.filter_list:
             sed.add_info("attenuation." + filt,
-                         -2.5 * np.log10(flux_att[filt] / flux_noatt[filt]))
+                         -2.5 * np.log10(flux_att[filt] / flux_noatt[filt]),
+                         unit='mag')
 
         sed.add_info('attenuation.ebvs_old_factor', self.ebvs_old_factor)
-        sed.add_info('attenuation.uv_bump_wavelength', self.uv_bump_wavelength)
-        sed.add_info('attenuation.uv_bump_width', self.uv_bump_width)
+        sed.add_info('attenuation.uv_bump_wavelength', self.uv_bump_wavelength,
+                     unit='nm')
+        sed.add_info('attenuation.uv_bump_width', self.uv_bump_width, unit='nm')
         sed.add_info('attenuation.uv_bump_amplitude', self.uv_bump_amplitude)
         sed.add_info('attenuation.powerlaw_slope', self.powerlaw_slope)
 

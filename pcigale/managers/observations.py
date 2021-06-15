@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2017 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 from astropy.table import Column
 import numpy as np
+from pathlib import Path
 from scipy.constants import parsec
 
 from ..utils.cosmology import luminosity_distance
@@ -12,7 +8,7 @@ from utils.io import read_table
 from .utils import get_info
 
 
-class ObservationsManager(object):
+class ObservationsManager:
     """Class to abstract the handling of the observations and provide a
     consistent interface for the rest of cigale to deal with observations.
 
@@ -27,7 +23,7 @@ class ObservationsManager(object):
             return ObservationsManagerVirtual(config, **kwargs)
 
 
-class ObservationsManagerPassbands(object):
+class ObservationsManagerPassbands:
     """Class to generate a manager for data files providing fluxes in
     passbands.
 
@@ -40,7 +36,7 @@ class ObservationsManagerPassbands(object):
 
         self.conf = config
         self.params = params
-        self.allpropertiesnames, self.massproportional = get_info(self)
+        self.allpropertiesnames, _, self.massproportional = get_info(self)
         self.table = read_table(config['data_file'])
         self.bands = [band for band in config['bands']
                       if not band.endswith('_err')]
@@ -62,6 +58,7 @@ class ObservationsManagerPassbands(object):
         self.tofit_err = self.bands_err + self.intprops_err + self.extprops_err
 
         # Sanitise the input
+        self._check_id()
         self._check_filters()
         self._check_errors(defaulterror)
         self._check_invalid(config['analysis_params']['lim_flag'],
@@ -90,6 +87,19 @@ class ObservationsManagerPassbands(object):
             self.idx += 1
             return obs
         raise StopIteration
+
+    def _check_id(self):
+        """Check that the id of each object is unique. If not trigger an
+        exception as it may cause issues down the road.
+
+        """
+        values, counts = np.unique(self.table['id'], return_counts=True)
+        duplicates = values[counts > 1].data
+
+        if duplicates.size > 0:
+            raise Exception("The input file has the following duplicated id: " +
+                            ", ".join(duplicates.astype(str)) +
+                            ". The id must be unique.")
 
     def _check_filters(self):
         """Check whether the list of filters and poperties makes sense.
@@ -147,7 +157,7 @@ class ObservationsManagerPassbands(object):
                 colerr = Column(data=np.fabs(self.table[item] * defaulterror),
                                 name=error)
                 self.table.add_column(colerr,
-                                      index=self.table.colnames.index(item)+1)
+                                      index=self.table.colnames.index(item) + 1)
                 print(f"Warning: {defaulterror * 100}% of {item} taken as "
                       f"errors.")
 
@@ -172,16 +182,14 @@ class ObservationsManagerPassbands(object):
 
         for item in self.bands + self.extprops:
             error = item + '_err'
-            w = np.where((self.table[item] < threshold) |
-                         (self.table[error] < threshold))
+            if upperlimits is False:
+                w = np.where((self.table[item] < threshold) |
+                             (self.table[error] <= 0.))
+            else:
+                w = np.where((self.table[item] < threshold) |
+                             (self.table[error] == 0.))
             self.table[item][w] = np.nan
             self.table[error][w] = np.nan
-            if upperlimits is False:
-                w = np.where(self.table[error] <= 0.)
-                self.table[item][w] = np.nan
-            else:
-                w = np.where(self.table[error] == 0.)
-                self.table[item][w] = np.nan
             if np.all(~np.isfinite(self.table[item])):
                 allinvalid.append(item)
 
@@ -212,7 +220,7 @@ class ObservationsManagerPassbands(object):
             error = item + '_err'
             w = np.where(self.table[error] >= 0.)
             self.table[error][w] = np.sqrt(self.table[error][w]**2. + (
-                self.table[item][w]*modelerror)**2.)
+                self.table[item][w] * modelerror)**2.)
 
     def generate_mock(self, fits):
         """Replaces the actual observations with a mock catalogue. It is
@@ -254,12 +262,13 @@ class ObservationsManagerPassbands(object):
             Root of the filename where to save the observations.
 
         """
-        self.table.write(f'out/{filename}.fits')
-        self.table.write(f'out/{filename}.txt', format='ascii.fixed_width',
+        out = Path('out')
+        self.table.write(out / f'{filename}.fits')
+        self.table.write(out / f'{filename}.txt', format='ascii.fixed_width',
                          delimiter=None)
 
 
-class ObservationsManagerVirtual(object):
+class ObservationsManagerVirtual:
     """Virtual observations manager when there is no observations file given
     as input. In that case we only use the list of bands given in the
     pcigale.ini file.
@@ -287,7 +296,7 @@ class ObservationsManagerVirtual(object):
         return 0
 
 
-class Observation(object):
+class Observation:
     """Class to take one row of the observations table and extract the list of
     fluxes, intensive properties, extensive properties and their errors, that
     are going to be considered in the fit.
@@ -316,7 +325,7 @@ class Observation(object):
                            if np.isfinite(row[k]) and row[k + '_err'] <= 0.}
         self.extprop_err = {k: row[k + '_err'] for k in self.extprop.keys()}
         self.extprop_ul_err = {k: -row[k + '_err']
-                               for prop in self.extprop_ul.keys()}
+                               for k in self.extprop_ul.keys()}
 
         self.intprop = {k: row[k] for k in cls.intprops}
         self.intprop_err = {k: row[k + '_err'] for k in cls.intprops}

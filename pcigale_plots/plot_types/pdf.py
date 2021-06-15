@@ -1,20 +1,10 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013-2014 Yannick Roehlly
-# Copyright (C) 2013 Institute of Astronomy
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly, Médéric Boquien & Denis Burgarella
-
-import glob
 from itertools import product
 import matplotlib
-from os import path
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import numpy as np
+
 from utils.io import read_table
 from utils.counter import Counter
 
@@ -33,18 +23,22 @@ def pool_initializer(counter):
 def pdf(config, format, outdir):
     """Plot the PDF of analysed variables.
     """
-    input_data = read_table(path.join(path.dirname(outdir), config.configuration['data_file']))
-    pdf_vars = config.configuration['analysis_params']['variables']
-    pdf_vars += [band for band in config.configuration['bands']
-                 if band.endswith('_err') is False]
+    save_chi2 = config.configuration['analysis_params']['save_chi2']
 
-    items = list(product(input_data['id'], pdf_vars, [format], [outdir]))
-    counter = Counter(len(items))
-    with mp.Pool(processes=config.configuration['cores'], initializer=pool_initializer,
-                 initargs=(counter,)) as pool:
-        pool.starmap(_pdf_worker, items)
-        pool.close()
-        pool.join()
+    pdf_vars = []
+    if 'all' in save_chi2 or 'properties' in save_chi2:
+        pdf_vars += config.configuration['analysis_params']['variables']
+    if 'all' in save_chi2 or 'fluxes' in save_chi2:
+        pdf_vars += config.configuration['analysis_params']['bands']
+    input_data = read_table(outdir.parent / config.configuration['data_file'])
+    if len(pdf_vars) > 0:
+        items = list(product(input_data['id'], pdf_vars, [format], [outdir]))
+        counter = Counter(len(items))
+        with mp.Pool(processes=config.configuration['cores'],
+                     initializer=pool_initializer, initargs=(counter,)) as pool:
+            pool.starmap(_pdf_worker, items)
+            pool.close()
+            pool.join()
 
 
 def _pdf_worker(obj_name, var_name, format, outdir):
@@ -56,19 +50,13 @@ def _pdf_worker(obj_name, var_name, format, outdir):
         Name of the object.
     var_name: string
         Name of the analysed variable..
-    outdir: string
+    outdir: Path
         The absolute path to outdir
 
     """
     gbl_counter.inc()
     var_name = var_name.replace('/', '_')
-    if var_name.endswith('_log'):
-        fnames = glob.glob(f"{outdir}/{obj_name}_{var_name[:-4]}_chi2-block-"
-                           f"*.npy")
-        log = True
-    else:
-        fnames = glob.glob(f"{outdir}/{obj_name}_{var_name}_chi2-block-*.npy")
-        log = False
+    fnames = outdir.glob(f"{obj_name}_{var_name}_chi2-block-*.npy")
     likelihood = []
     model_variable = []
     for fname in fnames:
@@ -79,8 +67,6 @@ def _pdf_worker(obj_name, var_name, format, outdir):
         model_variable.append(data[1, :])
     likelihood = np.concatenate(likelihood)
     model_variable = np.concatenate(model_variable)
-    if log is True:
-        model_variable = np.log10(model_variable)
     w = np.where(np.isfinite(likelihood) & np.isfinite(model_variable))
     likelihood = likelihood[w]
     model_variable = model_variable[w]
@@ -97,7 +83,7 @@ def _pdf_worker(obj_name, var_name, format, outdir):
         pdf_prob, pdf_grid = np.histogram(model_variable, Nhist,
                                           (min_hist, max_hist),
                                           weights=likelihood, density=True)
-        pdf_x = (pdf_grid[1:]+pdf_grid[:-1]) / 2.
+        pdf_x = (pdf_grid[1:] + pdf_grid[:-1]) / 2.
 
         pdf_grid = np.linspace(min_hist, max_hist, Npdf)
         pdf_prob = np.interp(pdf_grid, pdf_x, pdf_prob)
@@ -110,5 +96,5 @@ def _pdf_worker(obj_name, var_name, format, outdir):
     ax.minorticks_on()
     figure.suptitle(f"Probability distribution function of {var_name} for "
                     f"{obj_name}")
-    figure.savefig(f"{outdir}/{obj_name}_{var_name}_pdf.{format}")
+    figure.savefig(outdir / f"{obj_name}_{var_name}_pdf.{format}")
     plt.close(figure)

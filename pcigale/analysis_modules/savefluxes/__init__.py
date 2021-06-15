@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 Save fluxes analysis module
 ===========================
@@ -15,7 +10,6 @@ The data file is used only to get the list of fluxes to be computed.
 
 """
 
-from collections import OrderedDict
 import multiprocessing as mp
 
 from .. import AnalysisModule
@@ -35,27 +29,27 @@ class SaveFluxes(AnalysisModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("variables", (
+    parameter_list = {
+        "variables": (
             "cigale_string_list()",
             "List of the physical properties to save. Leave empty to save all "
             "the physical properties (not recommended when there are many "
             "models).",
             None
-        )),
-        ("save_sed", (
+        ),
+        "save_sed": (
             "boolean()",
             "If True, save the generated spectrum for each model.",
             False
-        )),
-        ("blocks", (
+        ),
+        "blocks": (
             "integer(min=1)",
             "Number of blocks to compute the models. Having a number of blocks"
             " larger than 1 can be useful when computing a very large number "
             "of models or to split the result file into smaller files.",
             1
-        ))
-    ])
+        )
+    }
 
     @staticmethod
     def _parallel_job(worker, items, initargs, initializer, ncores):
@@ -86,7 +80,6 @@ class SaveFluxes(AnalysisModule):
 
             print("Saving the models ....")
             models.save(f"models-block-{iblock}")
-
 
     def process(self, conf):
         """Process with the savedfluxes analysis.

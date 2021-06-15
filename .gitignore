@@ -2,7 +2,7 @@
 .DS_Store
 *.pyc
 build/
-pcigale/data/data.db
+*.pickle
 pcigale.egg-info
 docs/_build
 docs/api

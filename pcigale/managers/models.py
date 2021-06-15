@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2017 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 """This class manages the handling of models in the code. It contains the
 fluxes and the physical properties and all the necessary information to
 compute them, such as the configuration, the observations, and the parameters
@@ -10,13 +5,15 @@ of the models.
 """
 
 import ctypes
+from pathlib import Path
 
 from astropy.table import Table, Column
+from astropy.units import Unit
 
 from .utils import SharedArray, get_info
 
 
-class ModelsManager(object):
+class ModelsManager:
     """A ModelsManager contains the fluxes and the properties of all the
     models. In addition it contains all the information to understand how the
     models have been computed, what block of the grid of models they correspond
@@ -30,7 +27,7 @@ class ModelsManager(object):
         self.params = params
         self.block = params.blocks[iblock]
         self.iblock = iblock
-        self.allpropnames, self.allextpropnames = get_info(self)
+        self.allpropnames, self.unit, self.allextpropnames = get_info(self)
         self.allintpropnames = set(self.allpropnames) - self.allextpropnames
 
         props_nolog = set([prop[:-4] if prop.endswith('log') else prop
@@ -40,12 +37,12 @@ class ModelsManager(object):
         self.extpropnames = (self.allextpropnames & set(obs.extprops) |
                              self.allextpropnames & props_nolog)
         if 'bands' in conf['analysis_params']:
-            bandnames = set(obs.bands+conf['analysis_params']['bands'])
+            bandnames = set(obs.bands + conf['analysis_params']['bands'])
         else:
             bandnames = obs.bands
 
         size = len(params.blocks[iblock])
-        if conf['parameters_file'] is "":
+        if conf['parameters_file'] == "":
             self.nz = len(conf['sed_modules_params']['redshifting']['redshift'])
             self.nm = size // self.nz
 
@@ -71,12 +68,15 @@ class ModelsManager(object):
             else:
                 unit = 'mJy'
             table.add_column(Column(self.flux[band], name=band,
-                                    unit=unit))
+                                    unit=Unit(unit)))
         for prop in sorted(self.extprop.keys()):
-            table.add_column(Column(self.extprop[prop], name=prop))
+            table.add_column(Column(self.extprop[prop], name=prop,
+                                    unit=Unit(self.unit[prop])))
         for prop in sorted(self.intprop.keys()):
-            table.add_column(Column(self.intprop[prop], name=prop))
+            table.add_column(Column(self.intprop[prop], name=prop,
+                                    unit=Unit(self.unit[prop])))
 
-        table.write(f"out/{filename}.fits")
-        table.write(f"out/{filename}.txt", format='ascii.fixed_width',
+        out = Path('out')
+        table.write(out / f"{filename}.fits")
+        table.write(out / f"{filename}.txt", format='ascii.fixed_width',
                     delimiter=None)

@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2015 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2015 Institute of Astronomy, University of Cambridge
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Denis Burgarella
-
 """
 Modified Black Body module
 ======================================
@@ -15,8 +9,6 @@ the emission of a region completely embedded in dust and not visible in the
 wavelength range.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 import scipy.constants as cst
@@ -34,29 +26,29 @@ class MBB(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("epsilon_mbb", (
+    parameter_list = {
+        "epsilon_mbb": (
             "cigale_list(minvalue=0., maxvalue=1.)",
             "Fraction [>= 0] of L_dust(energy balance) in the MBB",
             0.5
-        )),
-        ("t_mbb", (
+        ),
+        "t_mbb": (
             "cigale_list(minvalue=0.)",
             "Temperature of black body in K.",
             50.
-        )),
-        ("beta_mbb", (
+        ),
+        "beta_mbb": (
             "cigale_list()",
             "Emissivity index of modified black body.",
             1.5
-        )),
-        ("energy_balance", (
+        ),
+        "energy_balance": (
             "boolean()",
             "Energy balance checked?"
             "If False, Lum[MBB] not taken into account in energy balance",
             False
-        )),
-    ])
+        )
+    }
 
     def _init_code(self):
         """Build the model for a given set of parameters."""
@@ -78,7 +70,7 @@ class MBB(SedModule):
         c = cst.c * 1e9
         lambda_0 = 200e3
 
-        self.wave = np.logspace(3., 6., 1000.)
+        self.wave = np.logspace(3., 6., 1000)
         conv = c / (self.wave * self.wave)
 
         self.lumin_mbb = (conv * (1. - np.exp(-(lambda_0 / self.wave)
@@ -98,11 +90,11 @@ class MBB(SedModule):
 
         """
         if 'dust.luminosity' not in sed.info:
-            sed.add_info('dust.luminosity', 1., True)
+            sed.add_info('dust.luminosity', 1., True, unit='W')
         luminosity = sed.info['dust.luminosity']
 
         sed.add_module(self.name, self.parameters)
-        sed.add_info("dust.t_mbb", self.T)
+        sed.add_info("dust.t_mbb", self.T, unit='K')
         sed.add_info("dust.beta_mbb", self.beta)
         sed.add_info("dust.epsilon_mbb", self.epsilon)
 
@@ -113,12 +105,11 @@ class MBB(SedModule):
             # existing as:
             # luminosity_other_balance = -luminosity_other * (1-epsilon);
             # epsilon being the contribution of the present MBB to L_dust.
-            other_dust_contributions = [contrib for contrib in
-                                        sed.contribution_names if
-                                        "dust" in contrib]
+            other_dust_contributions = [contrib for contrib in sed.luminosities
+                                        if "dust" in contrib]
             for item in other_dust_contributions:
                 item_balance = item + '_balance'
-                lumin = sed.get_lumin_contribution(item)
+                lumin = sed.luminosities[item]
                 wavelength = sed.wavelength_grid
                 sed.add_info(item_balance, 1., True)
                 sed.add_contribution(item_balance, wavelength, -lumin *

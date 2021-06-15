@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013-2015 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly, Véronique Buat, Denis Burgarella, Barabara Lo Faro
-
 """
 Double power law attenuation module
 ===================================
@@ -24,8 +18,6 @@ Parameters available for analysis
     contribution <NAME>
 - attenuation.<FILTER>: total attenuation in the filter
 """
-
-from collections import OrderedDict
 
 import numpy as np
 
@@ -104,35 +96,35 @@ class TwoPowerLawAtt(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("Av_BC", (
+    parameter_list = {
+        "Av_BC": (
             "cigale_list(minvalue=0)",
             "V-band attenuation in the birth clouds.",
             1.
-        )),
-        ("slope_BC", (
+        ),
+        "slope_BC": (
             "cigale_list()",
             "Power law slope of the attenuation in the birth clouds.",
             -1.3
-        )),
-        ("BC_to_ISM_factor", (
+        ),
+        "BC_to_ISM_factor": (
             "cigale_list(minvalue=0., maxvalue=1.)",
             "Av ISM / Av BC (<1).",
             0.44
-        )),
-        ("slope_ISM", (
+        ),
+        "slope_ISM": (
             "cigale_list()",
             "Power law slope of the attenuation in the ISM.",
             -0.7
-        )),
-        ("filters", (
+        ),
+        "filters": (
             "string()",
             "Filters for which the attenuation will be computed and added to "
             "the SED information dictionary. You can give several filter "
             "names separated by a & (don't use commas).",
             "V_B90 & FUV"
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         self.Av_BC = float(self.parameters['Av_BC'])
@@ -171,10 +163,10 @@ class TwoPowerLawAtt(SedModule):
         if len(self.lineatt) == 0:
             names = [k for k in sed.lines]
             linewl = np.array([sed.lines[k][0] for k in names])
-            old_curve =  10. ** (-.4 * alambda_av(linewl, self.slope_ISM) *
-                                 self.Av_ISM)
-            young_curve = 10. ** (-.4 * alambda_av(linewl, self.slope_BC) *
-                                  self.Av_BC) * old_curve
+            old_curve = 10.**(-.4 * alambda_av(linewl, self.slope_ISM) *
+                              self.Av_ISM)
+            young_curve = 10.**(-.4 * alambda_av(linewl, self.slope_BC) *
+                                self.Av_BC) * old_curve
 
             for name, old, young in zip(names, old_curve, young_curve):
                 self.lineatt[name] = (old, young)
@@ -183,12 +175,12 @@ class TwoPowerLawAtt(SedModule):
         flux_noatt = {filt: sed.compute_fnu(filt) for filt in self.filter_list}
 
         dust_lumin = 0.
-        contribs = [contrib for contrib in sed.contribution_names if
+        contribs = [contrib for contrib in sed.luminosities if
                     'absorption' not in contrib]
 
         for contrib in contribs:
             age = contrib.split('.')[-1].split('_')[-1]
-            luminosity = sed.get_lumin_contribution(contrib)
+            luminosity = sed.luminosities[contrib]
 
             attenuation_spectrum = luminosity * (self.contatt[age] - 1.)
             dust_lumin -= np.trapz(attenuation_spectrum, wl)
@@ -201,17 +193,18 @@ class TwoPowerLawAtt(SedModule):
             sed.lines[name] = (linewl, old * self.lineatt[name][0],
                                young * self.lineatt[name][1])
 
-        sed.add_info('attenuation.Av_BC', self.Av_BC)
-        sed.add_info('attenuation.slope_BC', self.slope_BC)
+        sed.add_info('attenuation.Av_BC', self.Av_BC, unit='mag')
+        sed.add_info('attenuation.slope_BC', self.slope_BC, unit='mag')
         sed.add_info('attenuation.BC_to_ISM_factor', self.BC_to_ISM_factor)
         sed.add_info('attenuation.slope_ISM', self.slope_ISM)
 
         # Total attenuation
         if 'dust.luminosity' in sed.info:
             sed.add_info("dust.luminosity",
-                         sed.info["dust.luminosity"] + dust_lumin, True, True)
+                         sed.info["dust.luminosity"] + dust_lumin, True, True,
+                         unit='W')
         else:
-            sed.add_info("dust.luminosity", dust_lumin, True)
+            sed.add_info("dust.luminosity", dust_lumin, True, unit='W')
 
         # Fλ fluxes (only in continuum) in each filter after attenuation.
         flux_att = {filt: sed.compute_fnu(filt) for filt in self.filter_list}
@@ -219,7 +212,8 @@ class TwoPowerLawAtt(SedModule):
         # Attenuation in each filter
         for filt in self.filter_list:
             sed.add_info("attenuation." + filt,
-                         -2.5 * np.log10(flux_att[filt] / flux_noatt[filt]))
+                         -2.5 * np.log10(flux_att[filt] / flux_noatt[filt]),
+                         unit='mag')
 
 
 # CreationModule to be returned by get_module

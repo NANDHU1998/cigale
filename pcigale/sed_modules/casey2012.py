@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013 Institute of Astronomy, University of Cambridge
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 """
 Casey (2012) IR models module
 =============================
@@ -11,8 +5,6 @@ Casey (2012) IR models module
 This module implements the Casey (2012) infra-red models.
 
 """
-
-from collections import OrderedDict
 
 import numpy as np
 import scipy.constants as cst
@@ -29,23 +21,23 @@ class Casey2012(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("temperature", (
+    parameter_list = {
+        "temperature": (
             "cigale_list(minvalue=0.)",
             "Temperature of the dust in K.",
             35.
-        )),
-        ("beta", (
+        ),
+        "beta": (
             "cigale_list(minvalue=0.)",
             "Emissivity index of the dust.",
             1.6
-        )),
-        ("alpha", (
+        ),
+        "alpha": (
             "cigale_list(minvalue=0.)",
             "Mid-infrared powerlaw slope.",
             2.
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         """Build the model for a given set of parameters."""
@@ -68,12 +60,12 @@ class Casey2012(SedModule):
         Npl = ((1. - np.exp(-(lambda_0 / lambda_c) ** beta)) * (c / lambda_c)
                ** 3. / (np.exp(cst.h * c / (lambda_c * cst.k * T)) - 1.))
 
-        self.wave = np.logspace(3., 6., 1000.)
+        self.wave = np.logspace(3., 6., 1000)
         conv = c / (self.wave * self.wave)
 
         self.lumin_blackbody = (conv * (1. - np.exp(-(lambda_0 / self.wave)
                                 ** beta)) * (c / self.wave) ** 3. / (np.exp(
-                                cst.h * c / (self.wave * cst.k * T)) - 1.))
+                                    cst.h * c / (self.wave * cst.k * T)) - 1.))
         self.lumin_powerlaw = (conv * Npl * (self.wave / lambda_c) ** alpha *
                                np.exp(-(self.wave / lambda_c) ** 2.))
 
@@ -97,11 +89,11 @@ class Casey2012(SedModule):
 
         """
         if 'dust.luminosity' not in sed.info:
-            sed.add_info('dust.luminosity', 1., True)
+            sed.add_info('dust.luminosity', 1., True, unit='W')
         luminosity = sed.info['dust.luminosity']
 
         sed.add_module(self.name, self.parameters)
-        sed.add_info("dust.temperature", self.temperature)
+        sed.add_info("dust.temperature", self.temperature, unit='K')
         sed.add_info("dust.beta", self.beta)
         sed.add_info("dust.alpha", self.alpha)
 
