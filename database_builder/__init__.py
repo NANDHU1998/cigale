@@ -914,7 +914,7 @@ def build_themis():
 def build_base(bc03res='lr'):
     print('#' * 78)
     print("1- Importing filters...\n")
-    #build_filters()
+    build_filters()
     print("\nDONE\n")
     print('#' * 78)
 
