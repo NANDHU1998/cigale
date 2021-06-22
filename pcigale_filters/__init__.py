@@ -60,7 +60,7 @@ def add_filters(fnames):
         # filter is a pseudo-filter used to compute line fluxes, it should not
         # be normalised.
         if not name.startswith('PSEUDO'):
-            pivot = np.sqrt(np.trapz(tr, wl) / np.trapz(tr / wl*2, wl))
+            pivot = np.sqrt(np.trapz(tr, wl) / np.trapz(tr / wl**2, wl))
 
             # The factor 10²⁰ is so that we get the fluxes directly in mJy when
             # we integrate with the wavelength in units of nm and the spectrum
