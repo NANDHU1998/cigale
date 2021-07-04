@@ -17,11 +17,12 @@ import glob
 import io
 import itertools
 import numpy as np
+from pathlib import Path
 from scipy import interpolate
 import scipy.constants as cst
 from astropy.table import Table
-from pcigale.data import (Database, Filter, M2005, BC03, Fritz2006,
-                          Dale2014, DL2007, DL2014, NebularLines,
+from pcigale.data import (Database, DATABASE_FILE, Filter, M2005, BC03,
+                          Fritz2006, Dale2014, DL2007, DL2014, NebularLines,
                           NebularContinuum, SKIRTOR2016, Schreiber2016, THEMIS)
 
 
@@ -898,6 +899,8 @@ def build_themis(base):
 
 
 def build_base(bc03res='lr'):
+    # First delete the database before rebuilding it.
+    Path(DATABASE_FILE).unlink(missing_ok=True)
     base = Database(writable=True)
     base.upgrade_base()
 
