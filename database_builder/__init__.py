@@ -60,7 +60,7 @@ def read_bc03_ssp(filename):
         there are 5 informational lines after the time vector. We use this
         generator to the if we are on lines to read or not.
         """
-        if "chab" in filename:
+        if "chab" in filename.stem:
             bad_line_number = 5
         else:
             bad_line_number = 6
@@ -140,17 +140,15 @@ def read_bc03_ssp(filename):
 
 def build_filters(base):
     filters = []
-    filters_dir = os.path.join(os.path.dirname(__file__), 'filters/')
-    for filter_file in glob.glob(filters_dir + '**/*.dat', recursive=True):
-        with open(filter_file, 'r') as filter_file_read:
+    filters_dir = Path(__file__).parent / "filters"
+    pathlen = len(filters_dir.parts)
+    for filter_file in filters_dir.rglob('*.dat'):
+        with filter_file.open() as filter_file_read:
             filter_name = filter_file_read.readline().strip('# \n\t')
             filter_type = filter_file_read.readline().strip('# \n\t')
             filter_description = filter_file_read.readline().strip('# \n\t')
 
-        # Make the name dynamic for filters in subdirectories
-        tmp_name = filter_file.replace(filters_dir, '')[:-4]
-        if '/' in tmp_name:
-            filter_name = tmp_name.replace('/', '.')
+        filter_name = '.'.join(filter_file.with_suffix('').parts[pathlen:])
         filter_table = np.genfromtxt(filter_file)
         # The table is transposed to have table[0] containing the wavelength
         # and table[1] containing the transmission.
@@ -187,16 +185,17 @@ def build_filters(base):
 
 def build_filters_gazpar(base):
     filters = []
-    filters_dir = os.path.join(os.path.dirname(__file__), 'filters_gazpar/')
-    for filter_file in glob.glob(filters_dir + '**/*.pb', recursive=True):
-        with open(filter_file, 'r') as filter_file_read:
+    filters_dir = Path(__file__).parent / 'filters_gazpar'
+    pathlen = len(filters_dir.parts)
+
+    for filter_file in filters_dir.rglob('*.pb'):
+        with filter_file.open() as filter_file_read:
             _ = filter_file_read.readline() # We use the filename for the name
             filter_type = filter_file_read.readline().strip('# \n\t')
             _ = filter_file_read.readline() # We do not yet use the calib type
             filter_desc = filter_file_read.readline().strip('# \n\t')
 
-        filter_name = filter_file.replace(filters_dir, '')[:-3]
-        filter_name = filter_name.replace('/', '.')
+        filter_name = '.'.join(filter_file.with_suffix('').parts[pathlen:])
 
         filter_table = np.genfromtxt(filter_file)
         # The table is transposed to have table[0] containing the wavelength
@@ -232,7 +231,7 @@ def build_filters_gazpar(base):
     base.add_filters(filters)
 
 def build_m2005(base):
-    m2005_dir = os.path.join(os.path.dirname(__file__), 'maraston2005/')
+    m2005_dir = Path(__file__).parent / "maraston2005"
 
     # Age grid (1 Myr to 13.7 Gyr with 1 Myr step)
     time_grid = np.arange(1, 13701)
@@ -240,21 +239,21 @@ def build_m2005(base):
 
     # Transpose the table to have access to each value vector on the first
     # axis
-    kroupa_mass = np.genfromtxt(m2005_dir + 'stellarmass.kroupa').transpose()
+    kroupa_mass = np.genfromtxt(m2005_dir / 'stellarmass.kroupa').transpose()
     salpeter_mass = \
-        np.genfromtxt(m2005_dir + '/stellarmass.salpeter').transpose()
+        np.genfromtxt(m2005_dir / 'stellarmass.salpeter').transpose()
 
-    for spec_file in glob.glob(m2005_dir + '*.rhb'):
+    for spec_file in m2005_dir.glob('*.rhb'):
 
         print("Importing %s..." % spec_file)
 
         spec_table = np.genfromtxt(spec_file).transpose()
         metallicity = spec_table[1, 0]
 
-        if 'krz' in spec_file:
+        if 'krz' in spec_file.stem:
             imf = 'krou'
             mass_table = np.copy(kroupa_mass)
-        elif 'ssz' in spec_file:
+        elif 'ssz' in spec_file.stem:
             imf = 'salp'
             mass_table = np.copy(salpeter_mass)
         else:
@@ -329,7 +328,7 @@ def build_m2005(base):
 
 
 def build_bc2003(base, res):
-    bc03_dir = os.path.join(os.path.dirname(__file__), 'bc03/')
+    bc03_dir = Path(__file__).parent / "bc03"
 
     # Time grid (1 Myr to 14 Gyr with 1 Myr step)
     time_grid = np.arange(1, 14000)
@@ -346,12 +345,12 @@ def build_bc2003(base, res):
     }
 
     for key, imf in itertools.product(metallicity, ["salp", "chab"]):
-        ssp_filename = "{}bc2003_{}_{}_{}_ssp.ised_ASCII".format(bc03_dir, res,
-                                                                 key, imf)
-        color3_filename = "{}bc2003_lr_{}_{}_ssp.3color".format(bc03_dir, key,
-                                                                imf)
-        color4_filename = "{}bc2003_lr_{}_{}_ssp.4color".format(bc03_dir, key,
-                                                                imf)
+        ssp_filename = bc03_dir / "bc2003_{}_{}_{}_ssp.ised_ASCII".format(
+            res, key, imf)
+        color3_filename = bc03_dir / "bc2003_lr_{}_{}_ssp.3color".format(
+            key, imf)
+        color4_filename = bc03_dir / "bc2003_lr_{}_{}_ssp.4color".format(
+            key, imf)
 
         print("Importing {}...".format(ssp_filename))
 
@@ -419,19 +418,19 @@ def build_bc2003(base, res):
 
 def build_dale2014(base):
     models = []
-    dale2014_dir = os.path.join(os.path.dirname(__file__), 'dale2014/')
+    dale2014_dir = Path(__file__).parent / 'dale2014'
 
     # Getting the alpha grid for the templates
-    d14cal = np.genfromtxt(dale2014_dir + 'dhcal.dat')
+    d14cal = np.genfromtxt(dale2014_dir / 'dhcal.dat')
     alpha_grid = d14cal[:, 1]
 
     # Getting the lambda grid for the templates and convert from microns to nm.
-    first_template = np.genfromtxt(dale2014_dir + 'spectra.0.00AGN.dat')
+    first_template = np.genfromtxt(dale2014_dir / 'spectra.0.00AGN.dat')
     wave = first_template[:, 0] * 1E3
 
     # Getting the stellar emission and interpolate it at the same wavelength
     # grid
-    stell_emission_file = np.genfromtxt(dale2014_dir +
+    stell_emission_file = np.genfromtxt(dale2014_dir /
                                         'stellar_SED_age13Gyr_tau10Gyr.spec')
     # A -> to nm
     wave_stell = stell_emission_file[:, 0] * 0.1
@@ -444,7 +443,7 @@ def build_dale2014(base):
 
     # Emission from dust heated by SB
     fraction = 0.0
-    filename = dale2014_dir + "spectra.0.00AGN.dat"
+    filename = dale2014_dir / "spectra.0.00AGN.dat"
     print("Importing {}...".format(filename))
     datafile = open(filename)
     data = "".join(datafile.readlines())
@@ -463,7 +462,7 @@ def build_dale2014(base):
 
         models.append(Dale2014(fraction, alpha_grid[al-1], wave, lumin))
     # Emission from dust heated by AGN - Quasar template
-    filename = dale2014_dir + "shi_agn.regridded.extended.dat"
+    filename = dale2014_dir / "shi_agn.regridded.extended.dat"
     print("Importing {}...".format(filename))
 
     wave, lumin_quasar = np.genfromtxt(filename, unpack=True)
@@ -479,7 +478,7 @@ def build_dale2014(base):
 
 def build_dl2007(base):
     models = []
-    dl2007_dir = os.path.join(os.path.dirname(__file__), 'dl2007/')
+    dl2007_dir = Path(__file__).parent / 'dl2007'
 
     qpah = {
         "00": 0.47,
@@ -502,7 +501,7 @@ def build_dl2007(base):
             "40": 0.0102, "50": 0.0103, "60": 0.0104}
 
     # Here we obtain the wavelength beforehand to avoid reading it each time.
-    datafile = open(dl2007_dir + "U{}/U{}_{}_MW3.1_{}.txt".format(umaximum[0],
+    datafile = open(dl2007_dir / "U{}/U{}_{}_MW3.1_{}.txt".format(umaximum[0],
                                                                   umaximum[0],
                                                                   umaximum[0],
                                                                   "00"))
@@ -520,7 +519,7 @@ def build_dl2007(base):
 
     for model in sorted(qpah.keys()):
         for umin in uminimum:
-            filename = dl2007_dir + "U{}/U{}_{}_MW3.1_{}.txt".format(umin,
+            filename = dl2007_dir / "U{}/U{}_{}_MW3.1_{}.txt".format(umin,
                                                                      umin,
                                                                      umin,
                                                                      model)
@@ -536,7 +535,7 @@ def build_dl2007(base):
 
             models.append(DL2007(qpah[model], umin, umin, wave, lumin))
             for umax in umaximum:
-                filename = dl2007_dir + "U{}/U{}_{}_MW3.1_{}.txt".format(umin,
+                filename = dl2007_dir / "U{}/U{}_{}_MW3.1_{}.txt".format(umin,
                                                                          umin,
                                                                          umax,
                                                                          model)
@@ -557,7 +556,7 @@ def build_dl2007(base):
 
 def build_dl2014(base):
     models = []
-    dl2014_dir = os.path.join(os.path.dirname(__file__), 'dl2014/')
+    dl2014_dir = Path(__file__).parent / 'dl2014'
 
     qpah = {"000": 0.47, "010": 1.12, "020": 1.77, "030": 2.50, "040": 3.19,
             "050": 3.90, "060": 4.58, "070": 5.26, "080": 5.95, "090": 6.63,
@@ -580,7 +579,7 @@ def build_dl2014(base):
             "080": 0.0106, "090": 0.0107, "100": 0.0108}
 
     # Here we obtain the wavelength beforehand to avoid reading it each time.
-    datafile = open(dl2014_dir + "U{}_{}_MW3.1_{}/spec_1.0.dat"
+    datafile = open(dl2014_dir / "U{}_{}_MW3.1_{}/spec_1.0.dat"
                     .format(uminimum[0], uminimum[0], "000"))
 
     data = "".join(datafile.readlines()[-1001:])
@@ -597,7 +596,7 @@ def build_dl2014(base):
 
     for model in sorted(qpah.keys()):
         for umin in uminimum:
-            filename = (dl2014_dir + "U{}_{}_MW3.1_{}/spec_1.0.dat"
+            filename = (dl2014_dir / "U{}_{}_MW3.1_{}/spec_1.0.dat"
                         .format(umin, umin, model))
             print("Importing {}...".format(filename))
             with open(filename) as datafile:
@@ -611,7 +610,7 @@ def build_dl2014(base):
 
             models.append(DL2014(qpah[model], umin, umin, 1.0, wave, lumin))
             for al in alpha:
-                filename = (dl2014_dir + "U{}_1e7_MW3.1_{}/spec_{}.dat"
+                filename = (dl2014_dir / "U{}_1e7_MW3.1_{}/spec_{}.dat"
                             .format(umin, model, al))
                 print("Importing {}...".format(filename))
                 with open(filename) as datafile:
@@ -629,7 +628,7 @@ def build_dl2014(base):
 
 def build_fritz2006(base):
     models = []
-    fritz2006_dir = os.path.join(os.path.dirname(__file__), 'fritz2006/')
+    fritz2006_dir = Path(__file__).parent / 'fritz2006'
 
     # Parameters of Fritz+2006
     psy = [0.001, 10.100, 20.100, 30.100, 40.100, 50.100, 60.100, 70.100,
@@ -641,7 +640,7 @@ def build_fritz2006(base):
     r_ratio = ["10", "30", "60", "100", "150"]
 
     # Read and convert the wavelength
-    datafile = open(fritz2006_dir + "ct{}al{}be{}ta{}rm{}.tot"
+    datafile = open(fritz2006_dir / "ct{}al{}be{}ta{}rm{}.tot"
                     .format(opening_angle[0], gamma[0], beta[0], tau[0],
                             r_ratio[0]))
     data = "".join(datafile.readlines()[-178:])
@@ -660,7 +659,7 @@ def build_fritz2006(base):
                    for rm in r_ratio)
 
     for params in iter_params:
-        filename = fritz2006_dir + "ct{}al{}be{}ta{}rm{}.tot".format(*params)
+        filename = fritz2006_dir / "ct{}al{}be{}ta{}rm{}.tot".format(*params)
         print("Importing {}...".format(filename))
         try:
             datafile = open(filename)
@@ -697,10 +696,10 @@ def build_fritz2006(base):
 
 def build_skirtor2016(base):
     models = []
-    skirtor2016_dir = os.path.join(os.path.dirname(__file__), 'skirtor2016/')
+    skirtor2016_dir = Path(__file__).parent / 'skirtor2016'
 
-    files = glob.glob(skirtor2016_dir + '/*')
-    files = [file.split('/')[-1] for file in files]
+    files = skirtor2016_dir.glob('*')
+    files = [file.stem.split('/')[-1] for file in files]
     params = [f.split('_')[:-1] for f in files]
 
     # Parameters of SKIRTOR 2016
@@ -722,7 +721,7 @@ def build_skirtor2016(base):
                    for p7 in i)
 
     for params in iter_params:
-        filename = skirtor2016_dir + \
+        filename = skirtor2016_dir / \
                 "t{}_p{}_q{}_oa{}_R{}_Mcl{}_i{}_sed.dat".format(*params)
         print("Importing {}...".format(filename))
 
@@ -748,16 +747,16 @@ def build_nebular(base):
     models_lines = []
     models_cont = []
 
-    nebular_dir = os.path.join(os.path.dirname(__file__), 'nebular/')
-    print("Importing {}...".format(nebular_dir + 'lines.dat'))
-    lines = np.genfromtxt(nebular_dir + 'lines.dat')
+    nebular_dir = Path(__file__).parent / 'nebular/'
+    print("Importing {}...".format(nebular_dir / 'lines.dat'))
+    lines = np.genfromtxt(nebular_dir / 'lines.dat')
 
-    tmp = Table.read(nebular_dir + 'line_wavelengths.dat', format='ascii')
+    tmp = Table.read(nebular_dir / 'line_wavelengths.dat', format='ascii')
     wave_lines = tmp['col1'].data
     name_lines = tmp['col2'].data
 
-    print("Importing {}...".format(nebular_dir + 'continuum.dat'))
-    cont = np.genfromtxt(nebular_dir + 'continuum.dat')
+    print("Importing {}...".format(nebular_dir / 'continuum.dat'))
+    cont = np.genfromtxt(nebular_dir / 'continuum.dat')
 
     # Convert wavelength from Å to nm
     wave_lines *= 0.1
@@ -803,13 +802,12 @@ def build_nebular(base):
 
 def build_schreiber2016(base):
     models = []
-    schreiber2016_dir = os.path.join(os.path.dirname(__file__),
-                                     'schreiber2016/')
+    schreiber2016_dir = Path(__file__).parent / 'schreiber2016'
 
-    print("Importing {}...".format(schreiber2016_dir + 'g15_pah.fits'))
-    pah = Table.read(schreiber2016_dir + 'g15_pah.fits')
-    print("Importing {}...".format(schreiber2016_dir + 'g15_dust.fits'))
-    dust = Table.read(schreiber2016_dir + 'g15_dust.fits')
+    print("Importing {}...".format(schreiber2016_dir / 'g15_pah.fits'))
+    pah = Table.read(schreiber2016_dir / 'g15_pah.fits')
+    print("Importing {}...".format(schreiber2016_dir / 'g15_dust.fits'))
+    dust = Table.read(schreiber2016_dir / 'g15_dust.fits')
 
     # Getting the lambda grid for the templates and convert from μm to nm.
     wave = dust['LAM'][0, 0, :].data * 1e3
@@ -830,7 +828,7 @@ def build_schreiber2016(base):
 
 def build_themis(base):
     models = []
-    themis_dir = os.path.join(os.path.dirname(__file__), 'themis/')
+    themis_dir = Path(__file__).parent / 'themis/'
 
     # Mass fraction of hydrocarbon solids i.e., a-C(:H) smaller than 1.5 nm,
     # also known as HAC
@@ -855,7 +853,7 @@ def build_themis(base):
             "080": 7.4e-3, "090": 7.4e-3, "100": 7.4e-3}
 
     # Here we obtain the wavelength beforehand to avoid reading it each time.
-    datafile = open(themis_dir + "U{}_{}_MW3.1_{}/spec_1.0.dat"
+    datafile = open(themis_dir / "U{}_{}_MW3.1_{}/spec_1.0.dat"
                     .format(uminimum[0], uminimum[0], "000"))
 
     data = "".join(datafile.readlines()[-576:])
@@ -871,7 +869,7 @@ def build_themis(base):
 
     for model in sorted(qhac.keys()):
         for umin in uminimum:
-            filename = (themis_dir + "U{}_{}_MW3.1_{}/spec_1.0.dat"
+            filename = (themis_dir / "U{}_{}_MW3.1_{}/spec_1.0.dat"
                         .format(umin, umin, model))
             print("Importing {}...".format(filename))
             with open(filename) as datafile:
@@ -883,7 +881,7 @@ def build_themis(base):
 
             models.append(THEMIS(qhac[model], umin, umin, 1.0, wave, lumin))
             for al in alpha:
-                filename = (themis_dir + "U{}_1e7_MW3.1_{}/spec_{}.dat"
+                filename = (themis_dir / "U{}_1e7_MW3.1_{}/spec_{}.dat"
                             .format(umin, model, al))
                 print("Importing {}...".format(filename))
                 with open(filename) as datafile:
