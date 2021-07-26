@@ -679,29 +679,27 @@ def build_fritz2006():
         for n in range(len(psy)):
             block = data[nskip + blocksize * n + 4 * (n + 1) - 1:
                          nskip + blocksize * (n+1) + 4 * (n + 1) - 1]
-            lumin_therm, lumin_scatt, lumin_agn = np.genfromtxt(
+            dust, scatt, disk = np.genfromtxt(
                 io.BytesIO("".join(block).encode()), usecols=(2, 3, 4),
                 unpack=True)
             # Remove NaN
-            lumin_therm = np.nan_to_num(lumin_therm)
-            lumin_scatt = np.nan_to_num(lumin_scatt)
-            lumin_agn = np.nan_to_num(lumin_agn)
+            dust = np.nan_to_num(dust)
+            scatt = np.nan_to_num(scatt)
+            disk = np.nan_to_num(disk)
+            # Merge scatter into disk
+            disk += scatt
             # Conversion from erg/s/microns to W/nm
-            lumin_therm *= 1e-4
-            lumin_scatt *= 1e-4
-            lumin_agn *= 1e-4
+            dust *= 1e-4
+            disk *= 1e-4
             # Normalization of the lumin_therm to 1W
-            norm = np.trapz(lumin_therm, x=wave)
-            lumin_therm /= norm
-            lumin_scatt /= norm
-            lumin_agn /= norm
-
+            norm = np.trapz(dust, x=wave)
+            dust /= norm
+            disk /= norm
 
             db.add({"r_ratio": float(params[4]), "tau": float(params[3]),
                     "beta": float(params[2]), "gamma": float(params[1]),
                     "opening_angle": float(params[0]), "psy": float(psy[n])},
-                   {"wl": wave, "spec_therm": lumin_therm,
-                    "spec_scatt": lumin_scatt, "spec_agn": lumin_agn})
+                   {"norm": norm, "wl": wave, "disk": disk, "dust": dust})
     db.close()
 
 def build_skirtor2016():

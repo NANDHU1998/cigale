@@ -15,23 +15,24 @@ import sys
 from .session.configuration import Configuration
 from .analysis_modules import get_module
 from .managers.parameters import ParametersManager
-
+from pcigale.utils.console import console, INFO
 
 def init(config):
     """Create a blank configuration file.
     """
     config.create_blank_conf()
-    print("The initial configuration file was created. Please complete it "
-          "with the data file name and the pcigale modules to use.")
+    console.print(f"{INFO} The initial configuration file was created. Please "
+                  "complete it with the data file name and the pcigale modules "
+                  "to use.")
 
 
 def genconf(config):
     """Generate the full configuration.
     """
     config.generate_conf()
-    print("The configuration file has been updated. Please complete the "
-          "various module parameters and the data file columns to use in "
-          "the analysis.")
+    console.print(f"{INFO} The configuration file has been updated. Please "
+                  "complete the various module parameters and the data file "
+                  "columns to use in the analysis.")
 
 
 def check(config):
@@ -43,8 +44,9 @@ def check(config):
 
     if configuration:
         pm = ParametersManager(configuration)
-        print(f"With this configuration cigale will compute "
-              f"{pm.size} models ({pm.size // pm.shape[-1]} per redshift).")
+        console.print(f"{INFO} With this configuration cigale will compute "
+                      f"{pm.size} models ({pm.size // pm.shape[-1]} per "
+                      "redshift).")
 
 
 def run(config):

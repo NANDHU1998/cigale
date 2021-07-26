@@ -39,12 +39,19 @@ def parser_range(range_str):
 
 
 def main():
+    if sys.version_info[:2] < (3, 8):
+        raise Exception(f"Python {sys.version_info[0]}.{sys.version_info[1]} is"
+                        f" unsupported. Please upgrade to Python 3.8 or later.")
 
-    if sys.version_info[:2] >= (3, 4):
-        mp.set_start_method('spawn')
+    # We set the sub processes start method to spawn because it solves
+    # deadlocks when a library cannot handle being used on two sides of a
+    # forked process. This happens on modern Macs with the Accelerate library
+    # for instance. On Linux we should be pretty safe with a fork, which allows
+    # to start processes much more rapidly.
+    if sys.platform.startswith('linux'):
+        mp.set_start_method('fork')
     else:
-        print("Could not set the multiprocessing start method to spawn. If "
-              "you encounter a deadlock, please upgrade to Python≥3.4.")
+        mp.set_start_method('spawn')
 
     parser = argparse.ArgumentParser()
 

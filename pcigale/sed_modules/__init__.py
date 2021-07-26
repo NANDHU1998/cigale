@@ -2,6 +2,8 @@ import os
 import inspect
 from importlib import import_module
 
+from pcigale.utils.console import console, ERROR
+
 
 def complete_parameters(given_parameters, parameter_list):
     """Complete the given parameter list with the default values
@@ -163,5 +165,4 @@ def get_module(name, **kwargs):
         module = import_module("." + name, 'pcigale.sed_modules')
         return module.Module(name=name, **kwargs)
     except ImportError:
-        print('Module ' + name + ' does not exist!')
-        raise
+        raise Exception(f"Module {name} could not be imported.")

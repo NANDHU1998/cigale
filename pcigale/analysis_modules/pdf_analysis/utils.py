@@ -75,7 +75,7 @@ def dchi2_over_ds2(s, obsdata, obsdata_err, obslim, obslim_err, moddata,
         Eq. A11 in Sawicki M. 2012, PASA, 124, 1008).
 
     """
-    # We enter into this function if lim_flag = True.
+    # We enter into this function if lim_flag = full.
 
     # The mask "data" selects the filter(s) for which measured fluxes are given
     # i.e., when obs_fluxes is >=0. and obs_errors >=0.
@@ -218,9 +218,11 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
     wz: slice
         Selection of the models at the redshift of the observation or all the
         redshifts in photometric-redshift mode.
-    lim_flag: boolean
-        Boolean indicating whether upper limits should be treated (True) or
-        discarded (False)
+    lim_flag: str
+        String indicating whether the inclusion of upper limits should affect
+        the scaling of the models (full) or nor (noscaling) or simply discard
+        upper limits (none).
+
 
     Returns
     -------
@@ -229,12 +231,12 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
     scaling: array
         scaling of the models to obtain the minimum χ²
     """
-    limits = lim_flag and (len(obs.flux_ul) > 0 or len(obs.extprop_ul) > 0)
     scaling = _compute_scaling(models, obs, corr_dz, wz)
 
     # Some observations may not have flux values in some filter(s), but
     # they can have upper limit(s).
-    if limits is True:
+    limits = (len(obs.flux_ul) > 0 or len(obs.extprop_ul) > 0)
+    if limits is True and lim_flag == "full":
         _correct_scaling_ul(scaling, models, obs, wz)
 
     # χ² of the comparison of each model to each observation.
@@ -247,6 +249,19 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
         inv_flux_err = 1. / obs.flux_err[band]
         model = models.flux[band][wz]
         chi2 += ((model * scaling - flux) * inv_flux_err) ** 2.
+
+    # Penalize det_alpha_ox which lie out of the user-set range
+    if (('xray' in models.params.modules) and
+        (models.conf['sed_modules_params']['xray']['max_dev_alpha_ox'] > 0)):
+        # Get the model indices that have valid AGN component
+        agn_idxs = np.where(models.extprop['agn.intrin_Lnu_2500A_30deg'][wz] > 0)[0]
+        # Calculate expected alpha_ox from Lnu_2500 (Just et al. 2007)
+        exp_alpha_ox = -0.137 * np.log10(models.extprop['agn.intrin_Lnu_2500A_30deg'][wz][agn_idxs] * 1e7 * scaling[agn_idxs]) + 2.638
+        # Calculate det_alpha_ox = alpha_ox - alpha_ox(Lnu_2500)
+        det_alpha_ox = models.intprop['xray.alpha_ox'][wz][agn_idxs] - exp_alpha_ox
+        # If det_alpha_ox out of range, set corresponding chi2 to nan
+        nan_idxs = agn_idxs[np.abs(det_alpha_ox) > models.conf['sed_modules_params']['xray']['max_dev_alpha_ox']]
+        chi2[nan_idxs] = np.nan
 
     # Computation of the χ² from intensive properties
     for name, prop in obs.intprop.items():
@@ -262,7 +277,7 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
         chi2 += (((scaling * model) * corr_dz - prop) * inv_prop_err) ** 2.
 
     # Finally take the presence of upper limits into account
-    if limits is True:
+    if limits is True and lim_flag != "none":
         for band, obs_error in obs.flux_ul_err.items():
             model = models.flux[band][wz]
             chi2 -= 2. * np.log(.5 *

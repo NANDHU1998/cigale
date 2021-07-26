@@ -33,7 +33,7 @@ from ...managers.results import ResultsManager
 from ...managers.models import ModelsManager
 from ...managers.observations import ObservationsManager
 from ...managers.parameters import ParametersManager
-
+from pcigale.utils.console import console, INFO
 
 class PdfAnalysis(AnalysisModule):
     """PDF analysis module"""
@@ -65,10 +65,16 @@ class PdfAnalysis(AnalysisModule):
             "none"
         ),
         "lim_flag": (
-            "boolean()",
-            "If true, for each object check whether upper limits are present "
-            "and analyse them.",
-            False
+            "option('full', 'noscaling', 'none')",
+            "Take into account upper limits. If 'full', the exact computation "
+            "is done. If 'noscaling', the scaling of the models will not be "
+            "adjusted but the χ² will include the upper limits adequately. "
+            "Waiving the adjustment makes the fitting much faster compared to "
+            "the 'full' option while generally not affecting the results in "
+            "any substantial manner. This is the recommended option as it "
+            "achieves a good balance between speed and reliability. Finally, "
+            "'none' simply discards bands with upper limits.",
+            "noscaling"
         ),
         "mock_flag": (
             "boolean()",
@@ -95,31 +101,37 @@ class PdfAnalysis(AnalysisModule):
 
     def _compute_models(self, conf, obs, params, iblock):
         models = ModelsManager(conf, obs, params, iblock)
-        counter = Counter(len(params.blocks[iblock]), 50, 250)
+        counter = Counter(len(params.blocks[iblock]), 50, "Model")
         initargs = (models, counter)
 
         self._parallel_job(worker_sed, params.blocks[iblock], initargs,
                            init_worker_sed, conf['cores'])
 
         # Print the final value as it may not otherwise be printed
-        if counter.global_counter.value % 250 != 0:
-            counter.pprint(len(params.blocks[iblock]))
+        counter.global_counter.value = len(params.blocks[iblock])
+        counter.progress.join()
+        console.print(f"{INFO} Done.")
 
         return models
 
     def _compute_bayes(self, conf, obs, models):
         results = ResultsManager(models)
-
-        initargs = (models, results, Counter(len(obs)))
+        counter = Counter(len(obs), 1, "Object")
+        initargs = (models, results, counter)
         self._parallel_job(worker_analysis, obs, initargs,
                            init_worker_analysis, conf['cores'], 1)
+        counter.progress.join()
+        console.print(f"{INFO} Done.")
 
         return results
 
     def _compute_best(self, conf, obs, params, results):
-        initargs = (conf, params, obs, results, Counter(len(obs)))
+        counter = Counter(len(obs), 1, "Object")
+        initargs = (conf, params, obs, results, counter)
         self._parallel_job(worker_bestfit, obs, initargs,
                            init_worker_bestfit, conf['cores'], 1)
+        counter.progress.join()
+        console.print(f"{INFO} Done.")
 
     def _parallel_job(self, worker, items, initargs, initializer, ncores,
                       chunksize=None):
@@ -136,27 +148,28 @@ class PdfAnalysis(AnalysisModule):
         results = []
         nblocks = len(params.blocks)
         for iblock in range(nblocks):
-            print(f"\nProcessing block {iblock + 1}/{nblocks}...")
+            console.rule(f"Block {iblock + 1}/{nblocks}")
             # We keep the models if there is only one block. This allows to
             # avoid recomputing the models when we do a mock analysis
             if not hasattr(self, '_models'):
-                print("\nComputing models ...")
+                console.print(f"{INFO} Computing models.")
                 models = self._compute_models(conf, obs, params, iblock)
                 if nblocks == 1:
                     self._models = models
             else:
-                print("\nLoading precomputed models")
+                console.print(f"{INFO} Loading precomputed models.")
                 models = self._models
 
-            print("\nEstimating the physical properties ...")
+            console.print(f"{INFO} Estimating the physical properties.")
             result = self._compute_bayes(conf, obs, models)
             results.append(result)
-            print("\nBlock processed.")
+            console.print(f"{INFO} Block processed.")
 
-        print("\nEstimating physical properties on all blocks")
+        console.rule("Global analysis")
+        console.print(f"{INFO} Estimating the physical properties.")
         results = ResultsManager.merge(results)
 
-        print("\nComputing the best fit spectra")
+        console.print(f"{INFO} Computing the best fit spectra.")
         self._compute_best(conf, obs, params, results)
 
         return results
@@ -178,7 +191,7 @@ class PdfAnalysis(AnalysisModule):
         """
         np.seterr(invalid='ignore')
 
-        print("Initialising the analysis module... ")
+        console.print(f"{INFO} Initialising the analysis module.")
 
         # Rename the output directory if it exists
         self.prepare_dirs()
@@ -194,14 +207,14 @@ class PdfAnalysis(AnalysisModule):
         obs.save('observations')
 
         results = self._compute(conf, obs, params)
-        print("\nSanity check of the analysis results...")
+        console.print(f"{INFO} Sanity check of the analysis results.")
         results.best.analyse_chi2()
 
-        print("\nSaving the analysis results...")
+        console.print(f"{INFO} Saving the analysis results.")
         results.save("results")
 
         if conf['analysis_params']['mock_flag'] is True:
-            print("\nAnalysing the mock observations...")
+            console.print(f"{INFO} Analysing the mock observations.")
 
             # For the mock analysis we do not save the ancillary files.
             for k in ['best_sed', 'chi2']:
@@ -213,10 +226,10 @@ class PdfAnalysis(AnalysisModule):
 
             results = self._compute(conf, obs, params)
 
-            print("\nSaving the mock analysis results...")
+            console.print(f"{INFO} Saving the mock analysis results.")
             results.save("results_mock")
 
-        print("Run completed!")
+        console.print(f"{INFO} Run completed! :thumbs_up:")
 
 
 # AnalysisModule to be returned by get_module

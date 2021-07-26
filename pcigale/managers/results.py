@@ -12,6 +12,7 @@ from astropy.table import Table, Column
 from astropy.units import Unit, LogUnit
 import numpy as np
 
+from pcigale.utils.console import console, INFO, ERROR
 from .utils import SharedArray
 
 
@@ -310,19 +311,19 @@ class BestResultsManager:
         # fitted. We warn the user in that case
         bad = [str(id_) for id_ in self.obs.table['id'][np.isnan(self.chi2)]]
         if len(bad) > 0:
-            print(f"No suitable model found for {', '.join(bad)}. It may be "
-                  f"that models are older than the universe or that your χ² are"
-                  f" very large.")
+            console.print("{ERROR} No suitable model found for "
+                          f"{', '.join(bad)}. It may be that models are older "
+                          "than the universe or that the χ² are very large.")
 
         obs = [self.obs.table[obs].data for obs in self.obs.tofit]
         nobs = np.count_nonzero(np.isfinite(obs), axis=0)
         chi2_red = self.chi2 / (nobs - 1)
         # If low values of reduced chi^2, it means that the data are overfitted
         # Errors might be under-estimated or not enough valid data.
-        print(f"{np.round(100. * (chi2_red < 1e-12).sum() / chi2_red.size, 1)}%"
-              f" of the objects have χ²_red~0 and "
-              f"{np.round(100. * (chi2_red < 0.5).sum() / chi2_red.size, 1)}% "
-              f"χ²_red<0.5")
+        console.print(f"{INFO} {np.round(100. * (chi2_red < 1e-12).sum() / chi2_red.size, 1)}%"
+                      " of the objects have χ²_red~0 and "
+                      f"{np.round(100. * (chi2_red < 0.5).sum() / chi2_red.size, 1)}% "
+                      "χ²_red<0.5.")
 
 
 class ResultsManager:

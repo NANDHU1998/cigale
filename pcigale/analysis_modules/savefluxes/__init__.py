@@ -19,7 +19,7 @@ from .workers import fluxes as worker_fluxes
 from ...managers.models import ModelsManager
 from ...managers.observations import ObservationsManager
 from ...managers.parameters import ParametersManager
-
+from pcigale.utils.console import console, INFO
 
 class SaveFluxes(AnalysisModule):
     """Save fluxes analysis module
@@ -62,23 +62,25 @@ class SaveFluxes(AnalysisModule):
                          initargs=initargs) as pool:
                 pool.starmap(worker, enumerate(items))
 
+
     def _compute_models(self, conf, obs, params):
         nblocks = len(params.blocks)
         for iblock in range(nblocks):
-            print(f"Computing models for block {iblock + 1}/{nblocks}...")
+            console.rule(f"Block {iblock + 1}/{nblocks}")
+            console.print(f"{INFO} Starting the computation of the models.")
 
             models = ModelsManager(conf, obs, params, iblock)
-            counter = Counter(len(params.blocks[iblock]), 50, 250)
+            counter = Counter(len(params.blocks[iblock]), 50, "Model")
 
             initargs = (models, counter)
             self._parallel_job(worker_fluxes, params.blocks[iblock], initargs,
                                init_worker_fluxes, conf['cores'])
 
             # Print the final value as it may not otherwise be printed
-            if counter.global_counter.value % 250 != 0:
-                counter.pprint(len(params.blocks[iblock]))
-
-            print("Saving the models ....")
+            counter.global_counter.value = len(params.blocks[iblock])
+            counter.progress.join()
+            console.print(f"{INFO} Done.")
+            console.print(f"{INFO} Saving the models.")
             models.save(f"models-block-{iblock}")
 
     def process(self, conf):
@@ -109,6 +111,9 @@ class SaveFluxes(AnalysisModule):
         params = ParametersManager(conf)
 
         self._compute_models(conf, observations, params)
+
+        console.print(f"{INFO} Run completed! :thumbs_up:")
+
 
 
 # AnalysisModule to be returned by get_module

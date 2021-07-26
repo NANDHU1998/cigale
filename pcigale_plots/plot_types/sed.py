@@ -14,6 +14,8 @@ from utils.io import read_table
 import matplotlib.gridspec as gridspec
 from utils.counter import Counter
 
+from pcigale.utils.console import console, WARNING
+
 # Name of the file containing the best models information
 BEST_RESULTS = "results.fits"
 MOCK_RESULTS = "results_mock.fits"
@@ -57,7 +59,7 @@ def sed(config, sed_type, nologo, xrange, yrange, series, format, outdir):
         logo = plt.imread(pkg_resources.resource_filename(__name__,
                                                           "../resources/CIGALE.png"))
 
-    counter = Counter(len(obs))
+    counter = Counter(len(obs), 1, "Object")
     with mp.Pool(processes=config.configuration['cores'],
                  initializer=pool_initializer, initargs=(counter,)) as pool:
         pool.starmap(_sed_worker, zip(obs, mod, repeat(filters),
@@ -67,6 +69,7 @@ def sed(config, sed_type, nologo, xrange, yrange, series, format, outdir):
                                       repeat(outdir)))
         pool.close()
         pool.join()
+    counter.progress.join()
 
 
 def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
@@ -145,7 +148,7 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
             for cname in sed.colnames[1:]:
                 sed[cname] *= fact
         else:
-            print("Unknown plot type")
+            console.print(f"{ERROR} Unknown plot type.")
 
         wsed = np.where((wavelength_spec > xmin) & (wavelength_spec < xmax))
         figure = plt.figure()
@@ -215,21 +218,23 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
                            marker=None, nonpositive='clip', linestyle='-',
                            linewidth=1.0)
 
-            # AGN emission Fritz
-            if 'agn' in series and 'agn.fritz2006_therm' in sed.columns:
+            # AGN emission
+            if 'agn' in series and ('agn.fritz2006_torus' in sed.columns or \
+                                    'agn.SKIRTOR2016_torus' in sed.columns):
+                if 'agn.fritz2006_torus' in sed.columns:
+                    agn_sed = sed['agn.fritz2006_polar_dust'] + \
+                              sed['agn.fritz2006_torus'] + \
+                              sed['agn.fritz2006_disk']
+                elif 'agn.SKIRTOR2016_torus' in sed.columns:
+                    agn_sed = sed['agn.SKIRTOR2016_polar_dust'] + \
+                              sed['agn.SKIRTOR2016_torus'] + \
+                              sed['agn.SKIRTOR2016_disk']
+                if 'xray.agn' in sed.columns:
+                    agn_sed += sed['xray.agn']
+                if 'radio.agn' in sed.columns:
+                    agn_sed += sed['radio.agn']
                 ax1.loglog(wavelength_spec[wsed],
-                           (sed['agn.fritz2006_therm'][wsed] +
-                            sed['agn.fritz2006_scatt'][wsed] +
-                            sed['agn.fritz2006_agn'][wsed]),
-                           label="AGN emission", color='xkcd:apricot',
-                           marker=None, nonpositive='clip', linestyle='-',
-                           linewidth=1.0)
-
-            # AGN emission SKIRTOR
-            if 'agn' in series and 'agn.SKIRTOR2016_dust' in sed.columns:
-                ax1.loglog(wavelength_spec[wsed],
-                           (sed['agn.SKIRTOR2016_dust'][wsed] +
-                            sed['agn.SKIRTOR2016_disk'][wsed]),
+                           agn_sed[wsed],
                            label="AGN emission", color='xkcd:apricot',
                            marker=None, nonpositive='clip', linestyle='-',
                            linewidth=1.0)
@@ -357,6 +362,6 @@ def _sed_worker(obs, mod, filters, sed_type, logo, xrange, yrange, series,
                            dpi=figure.dpi * 2.)
             plt.close(figure)
         else:
-            print(f"No valid best SED found for {obs['id']}. No plot created.")
+            gbl_counter.message.put(f"{WARNING} No valid best SED found for {obs['id']}. No plot created.")
     else:
-        print(f"No SED found for {obs['id']}. No plot created.")
+        gbl_counter.message.put(f"{WARNING} No SED found for {obs['id']}. No plot created.")

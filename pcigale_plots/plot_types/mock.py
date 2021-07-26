@@ -35,14 +35,12 @@ def mock(config, nologo, outdir):
     try:
         exact = Table.read(best_results_file)
     except FileNotFoundError:
-        print(f"Best models file {best_results_file} not found.")
-        sys.exit(1)
+        raise Exception(f"Best models file {best_results_file} not found.")
 
     try:
         estimated = Table.read(mock_results_file)
     except FileNotFoundError:
-        print(f"Mock models file {mock_results_file} not found.")
-        sys.exit(1)
+        raise Exception(f"Mock models file {mock_results_file} not found.")
 
     params = config.configuration['analysis_params']['variables']
 
@@ -57,12 +55,13 @@ def mock(config, nologo, outdir):
     arguments = [(exact[f"best.{param}"], estimated[f"bayes.{param}"], param,
                   logo, outdir) for param in params]
 
-    counter = Counter(len(arguments))
+    counter = Counter(len(arguments), 1, "Parameter")
     with mp.Pool(processes=config.configuration['cores'], initializer=pool_initializer,
                  initargs=(counter,)) as pool:
         pool.starmap(_mock_worker, arguments)
         pool.close()
         pool.join()
+    counter.progress.join()
 
 
 def _mock_worker(exact, estimated, param, logo, outdir):

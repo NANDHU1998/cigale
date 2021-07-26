@@ -33,12 +33,13 @@ def pdf(config, format, outdir):
     input_data = read_table(outdir.parent / config.configuration['data_file'])
     if len(pdf_vars) > 0:
         items = list(product(input_data['id'], pdf_vars, [format], [outdir]))
-        counter = Counter(len(items))
+        counter = Counter(len(items), 1, "PDF")
         with mp.Pool(processes=config.configuration['cores'],
                      initializer=pool_initializer, initargs=(counter,)) as pool:
             pool.starmap(_pdf_worker, items)
             pool.close()
             pool.join()
+        counter.progress.join()
 
 
 def _pdf_worker(obj_name, var_name, format, outdir):

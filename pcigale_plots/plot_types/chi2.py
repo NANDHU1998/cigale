@@ -30,12 +30,13 @@ def chi2(config, format, outdir):
                   if band.endswith('_err') is False]
 
     items = list(product(input_data['id'], chi2_vars, [format], [outdir]))
-    counter = Counter(len(items))
+    counter = Counter(len(items), 1, "Item")
     with mp.Pool(processes=config.configuration['cores'], initializer=pool_initializer,
                  initargs=(counter,)) as pool:
         pool.starmap(_chi2_worker, items)
         pool.close()
         pool.join()
+    counter.progress.join()
 
 
 def _chi2_worker(obj_name, var_name, format, outdir):

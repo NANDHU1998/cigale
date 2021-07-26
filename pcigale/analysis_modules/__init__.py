@@ -3,6 +3,7 @@ from importlib import import_module
 from pathlib import Path
 import shutil
 
+from pcigale.utils.console import console, INFO
 
 class AnalysisModule:
     """Abstract class, the pCigale analysis modules are based on.
@@ -48,7 +49,8 @@ class AnalysisModule:
         out = Path('out')
         if out.is_dir():
             old = out.rename(f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_out")
-            print(f"The {out.name} directory was renamed to {old.name}")
+            console.print(f"{INFO} The {out.name} directory was renamed to "
+                          f"{old.name}.")
 
         out.mkdir()
         shutil.copy('pcigale.ini', out)
@@ -126,5 +128,4 @@ def get_module(module_name):
         module = import_module('.' + module_name, 'pcigale.analysis_modules')
         return module.Module()
     except ImportError:
-        print('Module ' + module_name + ' does not exists!')
-        raise
+        raise Exception(f"Module {module_name} could not be imported.")

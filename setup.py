@@ -36,7 +36,8 @@ setup(
     version="dev",
     packages=find_packages(exclude=["database_builder"]),
 
-    install_requires=['numpy', 'scipy', 'matplotlib', 'configobj', 'astropy'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'configobj', 'astropy',
+                      'rich'],
     setup_requires=['numpy', 'scipy', 'astropy', 'configobj'],
     entry_points=entry_points,
 
