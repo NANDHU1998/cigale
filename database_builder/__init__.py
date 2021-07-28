@@ -735,61 +735,74 @@ def build_nebular():
 
 
 def build_nebular_AGN():
+
+    db = SimpleDatabase("nebular_agn", writable=True)
+
     path = Path(__file__).parent / "nebular_AGN"
-    region = ["NLR", "BLR"]
 
-    # wavelengths in nm in line_wavelengths_AGN.dat
-    tmp = Table.read(path / 'line_wavelengths_AGN.dat', format='ascii')
-    wave_lines = tmp['col1'].data # in nm
-    name_lines = tmp['col2'].data
+    regions = ["NLR", "BLR"]
+    disks = ["SKIRTOR", 'Schartmann']
+    # deltas = np.genfromtxt(path / "list_delta.dat")
+    deltas = [0.]  # switch to the above code when there are several deltas
+                  # in list_delta.dat
 
-    for rg in region:
-        # lines
-        fname = path / f"lines_{rg}_0.0.dat"
-        print(f"Importing {fname}...")
-        lines = np.genfromtxt(fname)
+    # Parameters constant across regions /disks / deltas.  We use formatted
+    # float strings to use in file names and will convert back to value for the
+    # database.
 
-        # continuum
-        fname = path / f"continuum_{rg}_0.0_0.0_Cig.dat"
-        print(f"Importing {fname}...")
-        cont = np.genfromtxt(fname)
-        wave_cont = cont[1:, 0] # continuum wavelength in nm, the sampling should be of  3729 points
-        wave_cont = np.unique(wave_cont)
-        nb_wvl= len(wave_cont)
+    log_us = np.genfromtxt(path / "list_logU.dat")
+    zetas = np.genfromtxt(path / "list_zetas.dat")
 
-        list_logU = np.genfromtxt(path / f"list_logU_{rg}.dat")
+    line_infos = Table.read(path / 'line_wavelengths_AGN.dat', format='ascii')
+    line_infos['col1'].name = "wavelength"  # in nm
+    line_infos['col2'].name = "label"
 
-        # Get the list of metallicities
-        metallicities = np.unique(lines[:, 1])
+    for region, disk, delta, zeta in itertools.product(
+            regions, disks, deltas, zetas):
 
-        # Keep only the fluxes
-        lines = lines[:, 2:] # the fluxes are in W/nm/photon
-        cont = cont[:, 1:] # the fluxes are in W/nm/photon
+        # Continuum table with a `lambda__[nm]` column with the wavelength grid
+        # then one column per logU_density tuple with the flux.
+        continuum_table = Table.read(
+            path / f"continuum_{disk}_{region}_{delta:.1f}_{zeta:.3f}_Cig.dat",
+            format='ascii')
+        log_u_density_colnames = continuum_table.colnames[1:]
 
-        # We select only models with ne=1e3cm-3. Other values could be included later
-        lines = lines[:, 1::3] # we select only the second models with ne=1e3cm-3 for NLR and ne=1e10cm-3 for BLR. Other values could be included later
-        lines = 10**lines
+        # Line table with the line index in the first column, the zeta in the
+        # second column, and then the same logU_density columns as the
+        # continuum table (except that they don't have column names here to we
+        # take them from the continuum table).
+        line_table = Table.read(
+            path / f"lines_{disk}_{region}_{delta:.1f}_Cig.dat",
+            format='ascii')
+        line_table.rename_columns(
+            line_table.colnames,
+            ['line_idx', 'zeta'] + log_u_density_colnames
+        )
+        # Limit the table to the considered zeta
+        line_table = line_table[line_table['zeta'] == zeta]
 
-        # Import lines
-        db = SimpleDatabase(f"nebular_lines_{rg}", writable=True)
-        for idx, metallicity in enumerate(metallicities):
-            spectra = lines[idx::len(metallicities), :]
-            for logU, spectrum in zip(list_logU, spectra.T):
-                db.add({"Z": metallicity, "logU": logU},
-                       {"name": name_lines, "wl": wave_lines, "spec": spectrum})
-        db.close()
+        densities = np.genfromtxt(path / f"list_density_{region}.dat")
 
-        # Import continuum
-        db = SimpleDatabase(f"nebular_continuum_{rg}", writable=True)
-        for metallicity in metallicities:
-             # There is one continuum file for each metallicity
-            cont = np.genfromtxt(path / f"continuum_{rg}_0.0_{metallicity}_Cig.dat")
-            # Skip the header (1st line) and select only the second models with
-            # ne = 1e3 cm¯³ for NLR and ne = 1e10 cm¯³ for BLR.
-            spectra = cont[1:, 2::3]
-            for logU, spectrum in zip(list_logU, spectra.T):
-                db.add({"Z": metallicity, "logU": logU},
-                       {"wl": wave_cont, "spec": spectrum})
+        for log_u, density in itertools.product(log_us, densities):
+            log_u_density_colname = f"{log_u:.1f}_{density:.1f}"
+
+            db.add(
+                {
+                    "region": region,
+                    "disk": disk,
+                    "delta": delta,
+                    "Z": zeta,
+                    "logU": log_u,
+                    "density": density,
+                }, {
+                    "lines_labels": line_infos['label'],
+                    "lines_wave": line_infos['wavelength'],
+                    "lines_spec": 10**line_table[log_u_density_colname],
+                    "cont_wave": continuum_table['lambda__[nm]'],
+                    "cont_spec": 10**continuum_table[log_u_density_colname],
+                }
+            )
+
         db.close()
 
 
