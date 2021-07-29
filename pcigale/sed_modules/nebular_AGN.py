@@ -104,13 +104,19 @@ class NebularEmissionAGN(SedModule):
         self.metallicity = float(self.parameters['metallicity'])
         self.disk = self.parameters['disk_model']
         self.delta = float(self.parameters['delta'])
-        self.f_NLR = float(self.parameters['f_NLR'])
-        self.nH_NLR = float(self.parameters['nH_NLR'])
-        self.f_BLR = float(self.parameters['f_BLR'])
-        self.nH_BLR = float(self.parameters['nH_BLR'])
+        self.covfact = {
+            "NLR": float(self.parameters['f_NLR']),
+            "BLR": float(self.parameters['f_BLR']),
+        }
+        self.density = {
+            "NLR": float(self.parameters['nH_NLR']),
+            "BLR": float(self.parameters['nH_BLR']),
+        }
         self.logU = float(self.parameters['logU'])
-        self.lines_width_NLR = float(self.parameters['lines_width_NLR'])
-        self.lines_width_BLR = float(self.parameters['lines_width_BLR'])
+        self.lines_width = {
+            "NLR": float(self.parameters['lines_width_NLR']),
+            "BLR": float(self.parameters['lines_width_BLR'])
+        }
 
         # Cache for getting model from the database.
         self.model = None
@@ -143,14 +149,14 @@ class NebularEmissionAGN(SedModule):
                         delta=self.delta,
                         Z=self.metallicity,
                         logU=self.logU,
-                        density=self.nH_NLR),
+                        density=self.density['NLR']),
                     "BLR": db.get(
                         region='BLR',
                         disk=self.disk,
                         delta=self.delta,
                         Z=self.metallicity,
                         logU=self.logU,
-                        density=self.nH_BLR),
+                        density=self.density['BLR']),
                 }
 
         # calculate the number of hydrogen-ionizing photons Q(H)
@@ -168,37 +174,48 @@ class NebularEmissionAGN(SedModule):
         sed.add_contribution(
             'nebular.continuum_NLR',
             self.model['NLR'].cont_wave,
-            self.model['NLR'].cont_spec * NLy * self.f_NLR
+            self.model['NLR'].cont_spec * NLy * self.covfact['NLR']
         )
         sed.add_contribution(
             'nebular.continuum_BLR',
             self.model['BLR'].cont_wave,
-            self.model['BLR'].cont_spec * NLy * self.f_BLR
+            self.model['BLR'].cont_spec * NLy * self.covfact['BLR']
         )
 
         # Compute lines wavelength grid and flux for NLR and BLR lines.
-        # TODO add the Gaussians
-        lines_BLR_wave = self.model['BLR'].lines_wave
-        lines_BLR_spec = self.model['BLR'].lines_spec
-        lines_NLR_wave = self.model['NLR'].lines_wave
-        lines_NLR_spec = self.model['NLR'].lines_spec
+        lines = {}
+        for region in ['BLR', 'NLR']:
+            lines_wave = self.model[region].lines_wave
+            lines_spec = self.model[region].lines_spec
+            lines_width = lines_wave * self.lines_width[region] * 1e3 / cst.c
 
-        self.add_contribution(
-            'nebular_lines_NLR',
-            lines_NLR_wave,
-            lines_NLR_spec
-        )
-        self.add_contribution(
-            'nebular_lines_BLR',
-            lines_BLR_wave,
-            lines_BLR_spec
-        )
+            # Wavelength grid of lines contribution. We take 9 points around
+            # each central wavelength, in 6 times the width range.
+            wavelength_grid = sorted(np.concatenate([
+                np.linspace(wave - 3 * width, wave + 3 * width,  9) for
+                wave, width in zip(lines_wave, lines_width)
+            ]))
 
+            # Lines luminosity as Gaussian.
+            lumin = np.zeros_like(wavelength_grid)
+            for wave, lumin, width in zip(lines_wave, lines_spec, lines_width):
+                lumin += (
+                    lumin * np.exp(
+                        - 4. * np.log(2.) * (wavelength_grid - wave) ** 2. /
+                        (width * width)) / (width * np.sqrt(np.pi / np.log(2.))
+                                            / 2.)
+                )
 
-        sed.add_info('AGN.nebular.lines_width_NLR', self.lines_width_NLR,
-                        unit='km/s')
-        sed.add_info('AGN.nebular.lines_width_BLR', self.lines_width_BLR,
-                        unit='km/s')
+            sed.add_contribution(
+                f"nebular_lines_{region}",
+                wavelength_grid,
+                lumin * NLy * self.covfact[region]
+            )
+
+        sed.add_info('AGN.nebular.lines_width_NLR', self.lines_width['NLR'],
+                     unit='km/s')
+        sed.add_info('AGN.nebular.lines_width_BLR', self.lines_width['BLR'],
+                     unit='km/s')
         sed.add_info('AGN.nebular.logU', self.logU)
 
 # SedModule to be returned by get_module
