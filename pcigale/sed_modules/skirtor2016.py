@@ -169,8 +169,8 @@ class SKIRTOR2016(SedModule):
         ),
         "oa": (
             "cigale_list(options=10 & 20 & 30 & 40 & 50 & 60 & 70 & 80)",
-            "Angle measured between the equatorial plan and edge of the torus. "
-            "Half-opening angle of the dust-free cone is 90°-oa. "
+            "Angle measured between the equatorial plane and edge of the torus. "
+            "Half-opening angle of the dust-free (or polar-dust) cone is 90°-oa. "
             "Possible values are: 10, 20, 30, 40, 50, 60, 70, and 80",
             40
         ),
@@ -488,6 +488,8 @@ class SKIRTOR2016(SedModule):
         # lumin_intrin_disk is calculated at viewing angle of 30°.
         power_accretion = agn_power * self.lumin_intrin_disk * 0.493
         l_agn_2500A = agn_power * self.l_agn_2500A
+        L6_agn = np.interp(6000, self.SKIRTOR2016.wl,
+                 self.SKIRTOR2016.dust + self.SKIRTOR2016.disk) * agn_power * 6000
 
         sed.add_info("agn.total_dust_luminosity", lumin_dust, True, unit="W")
         sed.add_info(
@@ -500,6 +502,7 @@ class SKIRTOR2016(SedModule):
         sed.add_info(
             "agn.intrin_Lnu_2500A_30deg", l_agn_2500A, True, unit="W/Hz"
         )
+        sed.add_info('agn.L_6um', L6_agn, True, unit='W')
 
         sed.add_contribution(
             "agn.SKIRTOR2016_torus",

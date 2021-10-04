@@ -127,13 +127,13 @@ class Configuration:
             ["* dl2014 (Draine et al. 2014 update of the previous models)"] +
             ["* themis (Themis dust emission models from Jones et al. 2017)"] +
             ["AGN:"] +
-            ["* fritz2006 (AGN models from Fritz et al. 2006)"] +
             ["* skirtor2016 (AGN models from Stalevski et al. 2012, 2016)"] +
+            ["* fritz2006 (AGN models from Fritz et al. 2006)"] +
             ["X-ray:"] +
-            ["* xray (from AGN and galaxies; skirtor2016 is needed for AGN)"] +
+            ["* xray (from AGN and galaxies; skirtor2016/fritz2006 is needed for AGN)"] +
             ["Radio:"] +
-            ["* radio (galaxy synchrotron emission and AGN; skirtor2016 is "
-             "needed for AGN)"] +
+            ["* radio (galaxy synchrotron emission and AGN; skirtor2016/fritz2006 "
+             "is needed for AGN)"] +
             ["Restframe parameters:"] +
             ["* restframe_parameters (UV slope (β), IRX, D4000, EW, etc.)"] +
             ["Redshift+IGM:"] +
