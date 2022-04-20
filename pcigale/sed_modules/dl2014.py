@@ -9,6 +9,7 @@ This module implements the updated Draine and Li (2007) infrared models.
 import numpy as np
 
 from pcigale.data import SimpleDatabase as Database
+from pcigale.sed_modules.dustextPHANGS import FitzIndeb
 from . import SedModule
 
 __category__ = "dust emission"
@@ -61,6 +62,11 @@ class DL2014(SedModule):
             "Fraction illuminated from Umin to Umax. Possible values between "
             "0 and 1.",
             0.1
+        ),
+        "self_abs": (
+            "boolean()",
+            "Take self-absorption into account.",
+            False
         )
     }
 
@@ -71,6 +77,7 @@ class DL2014(SedModule):
         self.umin = float(self.parameters["umin"])
         self.alpha = float(self.parameters["alpha"])
         self.gamma = float(self.parameters["gamma"])
+        self.self_abs = bool(self.parameters["self_abs"])
 
         # We also compute <U>. For this we consider Eq. 6 and 15 of Draine & Li
         # (2007) taking into account that α can be different from 2. We then
@@ -112,6 +119,9 @@ class DL2014(SedModule):
         self.model_minmin.spec *= (1. - self.gamma) / self.emissivity
         self.model_minmax.spec *= self.gamma / self.emissivity
 
+        if self.self_abs is True:
+            self.att = FitzIndeb().interp(self.model_minmin.wave)
+
     def process(self, sed):
         """Add the IR re-emission contributions
 
@@ -134,6 +144,14 @@ class DL2014(SedModule):
         # To compute the dust mass we simply divide the luminosity in W by the
         # emissivity in W/kg of dust.
         sed.add_info('dust.mass', luminosity / self.emissivity, True, unit='kg')
+
+        if self.self_abs is True:
+            att = 10.0 ** (-0.4 * self.att * sed.info['attenuation.E_BV'] * 3.08) - 1.0
+            luminosity /= 1. + np.trapz(att * (self.model_minmin.lumin + self.model_minmax.lumin), x=self.model_minmin.wave)
+            sed.add_contribution('dust.att_Umin_Umin', self.model_minmin.wave,
+                                 luminosity * self.model_minmin.lumin * att)
+            sed.add_contribution('dust.att_Umin_Umax', self.model_minmax.wave,
+                                 luminosity * self.model_minmax.lumin * att)
 
         sed.add_contribution('dust.Umin_Umin', self.model_minmin.wl,
                              luminosity * self.model_minmin.spec)
