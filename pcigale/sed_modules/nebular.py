@@ -4,6 +4,8 @@ import scipy.constants as cst
 from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
+__category__ = "nebular"
+
 default_lines = ['Ly-alpha',
                  'CII-133.5',
                  'SiIV-139.7',
@@ -58,6 +60,19 @@ class NebularEmission(SedModule):
             "Ionisation parameter",
             -2.
         ),
+        'zgas': (
+            'cigale_list(options=0.0001 & 0.0004 & 0.001 & 0.002 & 0.0025 & '
+            '0.003 & 0.004 & 0.005 & 0.006 & 0.007 & 0.008 & 0.009 & 0.011 & '
+            '0.012 & 0.014 & 0.016 & 0.019 & 0.022 & 0.025 & 0.03 & 0.033 & '
+            '0.037 & 0.041 & 0.046 & 0.051)',
+            "Gas metallicity",
+            0.014
+        ),
+        'ne': (
+            'cigale_list(options=10 & 100 & 1000)',
+            "Electron density",
+            100
+        ),
         'f_esc': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "Fraction of Lyman continuum photons escaping the galaxy",
@@ -85,6 +100,8 @@ class NebularEmission(SedModule):
            them to see the line profile. Compute scaling coefficients.
         """
         self.logU = float(self.parameters['logU'])
+        self.zgas = float(self.parameters['zgas'])
+        self.ne = float(self.parameters['ne'])
         self.fesc = float(self.parameters['f_esc'])
         self.fdust = float(self.parameters['f_dust'])
         self.lines_width = float(self.parameters['lines_width'])
@@ -106,11 +123,11 @@ class NebularEmission(SedModule):
         if self.emission:
             with Database("nebular_continuum") as db:
                 metallicities = db.parameters['Z']
-                self.cont_template = {m: db.get(Z=m, logU=self.logU)
+                self.cont_template = {m: db.get(Z=m, logU=self.logU, ne=self.ne)
                                       for m in metallicities}
 
             with Database("nebular_lines") as db:
-                self.lines_template = {m: db.get(Z=m, logU=self.logU)
+                self.lines_template = {m: db.get(Z=m, logU=self.logU, ne=self.ne)
                                        for m in metallicities}
 
             self.linesdict = {m: dict(zip(self.lines_template[m].name,
@@ -186,13 +203,15 @@ class NebularEmission(SedModule):
         if self.emission:
             NLy_old = sed.info['stellar.n_ly_old']
             NLy_young = sed.info['stellar.n_ly_young']
-            metallicity = sed.info['stellar.metallicity']
+            metallicity = self.zgas
             lines = self.lines_template[metallicity]
             linesdict = self.linesdict[metallicity]
             cont = self.cont_template[metallicity]
 
             sed.add_info('nebular.lines_width', self.lines_width, unit='km/s')
             sed.add_info('nebular.logU', self.logU)
+            sed.add_info('nebular.zgas', self.zgas)
+            sed.add_info('nebular.ne', self.ne, unit='cm^-3')
 
             for line in default_lines:
                 wave, ratio = linesdict[line]

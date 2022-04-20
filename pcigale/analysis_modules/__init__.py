@@ -5,6 +5,7 @@ import shutil
 
 from pcigale.utils.console import console, INFO
 
+
 class AnalysisModule:
     """Abstract class, the pCigale analysis modules are based on.
     """

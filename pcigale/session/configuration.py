@@ -10,13 +10,14 @@ import validate
 
 from ..managers.parameters import ParametersManager
 from ..data import SimpleDatabase as Database
-from utils.io import read_table
+from pcigale.utils.io import read_table
 from .. import sed_modules
 from .. import analysis_modules
 from ..warehouse import SedWarehouse
 from . import validation
 from pcigale.sed_modules.nebular import default_lines
-from pcigale.utils.console import console, INFO, WARNING, ERROR
+from pcigale.utils.console import console, INFO, ERROR
+
 
 class Configuration:
     """This class manages the configuration of pcigale.
@@ -69,6 +70,9 @@ class Configuration:
         well as the method selected for statistical analysis.
 
         """
+        # If there is a pre-existing pcigale.ini, delete the initial comment as
+        # otherwise it gets added each time a pcigale init is run.
+        self.config.initial_comment = []
 
         self.config['data_file'] = ""
         self.config.comments['data_file'] = wrap(
@@ -168,6 +172,11 @@ class Configuration:
         if self.pcigaleini_exists is False:
             raise Exception("pcigale.ini could not be found.")
 
+        modules = self.config["sed_modules"]
+        if "m2005" in modules:
+            if "nebular" in modules or "xray" in modules:
+                raise Exception("The m2005 module is not compatible with the "
+                                "nebular and xray modules.")
         # Getting the list of the filters available in pcigale database
         with Database("filters") as db:
             filter_list = db.parameters["name"]
@@ -216,6 +225,13 @@ class Configuration:
             "the equivalent widths and for luminosity densities.")
         self.spec['properties'] = "cigale_string_list()"
 
+        # Additional error
+        self.config["additionalerror"] = "0.1"
+        self.config.comments["additionalerror"] = [""] + wrap("Relative "
+            "error added in quadrature to the uncertainties of the fluxes and "
+            "the extensive properties.")
+        self.spec["additionalerror"] = "float(min=0.0)"
+
         # SED creation modules configurations. For each module, we generate
         # the configuration section from its parameter list.
         self.config['sed_modules_params'] = {}
@@ -240,8 +256,6 @@ class Configuration:
                 sub_spec[name] = typ
             self.config['sed_modules_params'].comments[module_name] = [
                 sed_modules.get_module(module_name, blank=True).comments]
-
-        self.check_modules()
 
         # Configuration for the analysis method
         self.config['analysis_params'] = {}
@@ -302,53 +316,6 @@ class Configuration:
             return None
 
         return self.config.copy()
-
-    def check_modules(self):
-        """Make a basic check to ensure that some required modules are present.
-        Otherwise we emit a warning so the user knows their list of modules is
-        suspicious. We do not emit an exception as they may be using an
-        unofficial module that is not in our list
-        """
-
-        modules = {'SFH': ['sfh2exp', 'sfhdelayed', 'sfhdelayedbq',
-                           'sfhfromfile', 'sfhperiodic'],
-                   'SSP': ['bc03', 'm2005'],
-                   'nebular': ['nebular'],
-                   'dust attenuation': ['dustatt_calzleit', 'dustatt_powerlaw',
-                                        'dustatt_2powerlaws',
-                                        'dustatt_modified_CF00',
-                                        'dustatt_modified_starburst'],
-                   'dust emission': ['casey2012', 'dale2014', 'dl2007',
-                                     'dl2014', 'themis'],
-                   'AGN': ['fritz2006', 'skirtor2016'],
-                   'X-ray': ['xray'],
-                   'radio': ['radio'],
-                   'restframe_parameters': ['restframe_parameters'],
-                   'redshift': ['redshifting']
-                   }
-
-        comments = {'SFH': f"{WARNING} No SFH module selected. Is it on "
-                           "purpose?",
-                    'SSP': f"{WARNING} No SSP module selected. Is it on "
-                           "purpose?",
-                    'nebular': f"{INFO} No nebular module selected. Without it "
-                               "the Lyman continuum is left untouched.",
-                    'dust attenuation': f"{INFO} No dust attenuation module "
-                                        "selected.",
-                    'dust emission': f"{INFO} No dust emission module "
-                                     "selected.",
-                    'AGN': f"{INFO} No AGN module selected.",
-                    'X-ray': f"{INFO} No X-ray module selected.",
-                    'radio': f"{INFO} No radio module selected.",
-                    'restframe_parameters': f"{INFO} No restframe parameters "
-                                            "module selected.",
-                    'redshift': f"{ERROR} No redshifting module found."}
-
-        for module in modules:
-            if all([user_module not in modules[module] for user_module in
-                    self.config['sed_modules']]):
-                console.print(f"{comments[module]} Options are: [b]"
-                              f"{'[/b], [b]'.join(modules[module])}[/b].")
 
     def complete_redshifts(self):
         """Complete the configuration when the redshifts are missing from the

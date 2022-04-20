@@ -11,6 +11,8 @@ import numpy as np
 
 from . import SedModule
 
+__category__ = "dust attenuation"
+
 
 def k_calzetti2000(wavelength):
     """Compute the Calzetti et al. (2000) A(λ)/E(B-V)∗

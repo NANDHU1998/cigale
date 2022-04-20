@@ -2,12 +2,24 @@
 
 ## Unreleased
 ### Added
+- By default CIGALE adds 10% of the flux in quadrature to the uncertainties to represent sources of uncertainty that are not included by default in the photometric error bars. Changing this value required manually changing a source file. Now this setting is directly available in the `pcigale.ini` file. (Médéric Boquien)
+### Changed
+### Fixed
+### Optimised
+
+## 2022.0 (2022-01-10)
+### Added
 - The polar dust model of X-CIGALE (Yang et al., 2020) for the `skirtor2016` module has been integrated into the regular version. (Médéric Boquien, based on the initial work of Guang Yang)
 - An additional check is done when constructing the `pcigale.ini` and `pcigale.ini.spec` files to avoid the generation of an incorrect `pcigale.ini.spec` when `pcigale.ini` exists but `pcigale.ini.spec` does not, which is not supposed to happen under regular circumstances. (Médéric Boquien)
 - Now `pcigale check` also displays the number of models per redshift. (Médéric Boquien)
 - Implementation of the AGN radio emission (Guang Yang, adapted by Médéric Boquien)
+- It is now possible to choose the electron density of the nebular models (10, 100, or 1000 cm¯³). (Médéric Boquien)
 - The X-ray modelling from X-CIGALE has been integrated into the regular version. This mainly comprises the new `xray` module and modifications to the fitting procedure to take into account the constraints based on ΔαOX. (Guang Yang, adapted by Médéric Boquien)
 - The ugrizy LSST filters (version 1.7) have been added to the default list of filters. (Médéric Boquien)
+- The intrinsic UV slope β₀ is now computed at the same time as the observed UV slope β when `beta_calz94` is set to `True` in the `restframe_parameters` module. (Médéric Boquien)
+- When starting `pcigale`, tables are now displayed with 1) information about cigale and the machine (cigale version, python version, and platform), 2) summary information about the run (input file names, number of objects, redshift range, number of models, band and properties to, fit number of cores, analysis module), and 3) the module used for each SED component. (Médéric Boquien & Miguel Figueira)
+- The start time, end time, and run duration are now displayed (Médéric Boquien & Miguel Figueira)
+- New CLOUDY nebular models. There are now 25 different metallicities and the metallicity of the stars and of the gas can differ. These models are described in detail in Villa-Vélez et al. (2021). (Jorge Villa-Vélez, Patrice Theulé, Véronique Buat, and Médéric Boquien)
 ### Changed
 - The IGM absorption from Meiksin has been modified to include the dependence of the hydrogen absorption cross section (~λ^2.75) so that the universe becomes transparent again at very short wavelengths. (Guang Yang, adapted by Médéric Boquien)
 - The `fluxes` module has been removed as it has been superseded by the `bands` parameter of the `pdf\_analysis` module. (Médéric Boquien)
@@ -33,7 +45,10 @@
 - Fix incorrect filename handling that prevented the import of the `skirtor2016` models under Microsoft Windows. (Médéric Boquien)
 - Following a past change in the way `chi2` files are saved, adapt `pcigale\_plot` to correctly produce PDF plots for physical properties that are in log rather than crashing. (Médéric Boquien)
 - Improve path handling so that all the filters are correctly imported under Microsoft Windows. (Médéric Boquien)
-- When an unknown variable is listed in `pdf\_analysis`, an exception is now raised before starting the run. (Médéric Boquien, report by Guang Yang)
+- When an unknown variable is listed in `pdf\_analysis`, an exception is now raised before starting the run. (Médéric Boquien, reported by Guang Yang)
+- The `m2005` module is not compatible with the `nebular` and `xray` modules. An exception is not emitted when trying to build the `pcigale.ini` file. (Médéric Boquien, reported by Miguel Figueira)
+- When running `pcigale init` several times with an existing `pcigale.ini`, the top comment was repeatedly included due to the default behaviour of configobj. (Médéric Boquien, reported by Miguel Figueira)
+- Import `Iterable` from `collections.abc` rather than from `collections` in order to prevent `ImportError`/`AttributeError` exceptions with Python 3.10+. (Médéric Boquien)
 ### Optimised
 - The estimation of the physical properties and the related uncertainties has been made up to 50% faster. The final gain in the analysis speed accounting for all the steps depends on the number of properties to be evaluated and the number of models but can be over 25% when estimating many properties over a large parameter space. (Médéric Boquien)
 - Invalid models (e.g., when the stellar populations are older than the universe) are now ignored when handling upper limits. The speedup is very variable but can be substantial in case there are many invalid models. (Médéric Boquien)
@@ -41,6 +56,7 @@
 - The storage of individual spectral physical components has been improved in order to require fewer memory allocations and copies. The exact gain depends somewhat on the parameter space but speedups of about 50% are typically seen. (Médéric Boquien)
 - The test to determine if we need to reinterpolate all the components when adding a new one has been made more efficient, yielding a speedup of 1.5-2.0%. (Médéric Boquien)
 - The `sfhfromfile` module is much faster now, thanks to caching the file containing the SFH. (Médéric Boquien)
+- The computation of the UV slope β in the `resftframe_parameters` module has been made faster. (Médéric Boquien)
 
 ## 2020.0 (2020-06-29)
 ### Added

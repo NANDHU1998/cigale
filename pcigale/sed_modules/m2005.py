@@ -11,6 +11,8 @@ import numpy as np
 from . import SedModule
 from ..data import SimpleDatabase as Database
 
+__category__ = "SSP"
+
 
 class M2005(SedModule):
     """Maraston (2005) stellar emission module

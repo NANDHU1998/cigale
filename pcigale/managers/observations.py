@@ -3,11 +3,12 @@ import numpy as np
 from pathlib import Path
 from scipy.constants import parsec
 
-from ..utils.cosmology import luminosity_distance
-from utils.io import read_table
+from pcigale.utils.cosmology import luminosity_distance
+from pcigale.utils.io import read_table
 from .utils import get_info
 
 from pcigale.utils.console import console, WARNING
+
 
 class ObservationsManager:
     """Class to abstract the handling of the observations and provide a
@@ -64,7 +65,7 @@ class ObservationsManagerPassbands:
         self._check_errors(defaulterror)
         self._check_invalid(config['analysis_params']['lim_flag'],
                             threshold)
-        self._add_model_error(modelerror)
+        self._add_model_error(config["additionalerror"])
 
         # Rebuild the quantities to fit after vetting them
         self.tofit = self.bands + self.intprops + self.extprops

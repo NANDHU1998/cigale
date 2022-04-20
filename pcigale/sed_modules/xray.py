@@ -11,6 +11,8 @@ import scipy.constants as cst
 
 from . import SedModule
 
+__category__ = "X-ray"
+
 
 class Xray(SedModule):
     """X-ray emission
@@ -23,13 +25,18 @@ class Xray(SedModule):
         "gam": (
             "cigale_list()",
             "Photon index (Γ) of the AGN intrinsic X-ray spectrum.",
-            1.8
+            1.8,
+        ),
+        "E_cut": (
+            "cigale_list()",
+            "Exponential cutoff energy of the AGN spectrum in keV.",
+            300,
         ),
         "alpha_ox": (
             "cigale_list()",
             "Power-law slope connecting Lν at rest-frame 2500 Å and 2 keV, "
             "defined as αox = 0.3838×log(Lν(2keV)/Lν(2500 Å)).",
-            (-1.9, -1.8, -1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1)
+            (-1.9, -1.8, -1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1),
         ),
         "max_dev_alpha_ox": (
             "float()",
@@ -40,7 +47,7 @@ class Xray(SedModule):
             "viewing angle of 30°. Setting it to zero or a negative value "
             "means do not apply the αox-Lν(2500 Å) relation (i.e., we allow "
             "all given αox values).",
-            0.2
+            0.2,
         ),
         "angle_coef": (
             "cigale_string_list()",
@@ -51,28 +58,29 @@ class Xray(SedModule):
             "is defined in the AGN module. Setting to 0 & 0 means isotropic "
             "AGN X-ray emission. Multiple sets of a1 & a2 separated by commas "
             "can be provided.",
-            "0.5 & 0"
+            "0.5 & 0",
         ),
         "det_lmxb": (
             "cigale_list()",
             "Deviation from the expected low-mass X-ray binary (LMXB) logLx. "
             "Positive values mean higher logLx from LMXB.",
-            0.
+            0.0,
         ),
         "det_hmxb": (
             "cigale_list()",
             "Deviation from the expected high-mass X-ray binary (HMXB) logLx. "
             "Positive values mean higher logLx from HMXB.",
-            0.
-        )
+            0.0,
+        ),
     }
 
     def _init_code(self):
         """Build the model for a given set of parameters."""
 
         self.gam = float(self.parameters["gam"])
+        self.E_cut = float(self.parameters["E_cut"])
         self.a1, self.a2 = [
-            float(item) for item in self.parameters["angle_coef"].split('&')
+            float(item) for item in self.parameters["angle_coef"].split("&")
         ]
         self.det_lmxb = float(self.parameters["det_lmxb"])
         self.det_hmxb = float(self.parameters["det_hmxb"])
@@ -86,7 +94,7 @@ class Xray(SedModule):
         lam_1keV = self.c * cst.h / (1e3 * cst.eV)
         lam_0p5keV = lam_1keV * 2
         lam_100keV = lam_1keV * 0.01
-        lam_300keV = lam_1keV * 0.0033333
+        lam_cut = lam_1keV / self.E_cut
         lam_2keV = lam_1keV / 2
         lam_10keV = lam_1keV * 0.1
 
@@ -124,14 +132,13 @@ class Xray(SedModule):
 
         # We compute the unobscured AGN corona X-ray emission
         # The shape is power-law with high-E exp. cutoff
-        # with cut-off E=300 keV (Ueda+2014; Aird+2015)
         self.lumin_corona = self.wave ** (self.gam - 3.0) * np.exp(
-            -lam_300keV / self.wave
+            -lam_cut / self.wave
         )
 
         # Normalise the SED at 2 keV
         self.lumin_corona *= 1.0 / (
-            lam_2keV ** (self.gam - 3.0) * np.exp(-lam_300keV / lam_2keV)
+            lam_2keV ** (self.gam - 3.0) * np.exp(-lam_cut / lam_2keV)
         )
 
         # Calculate total AGN corona X-ray luminosity
@@ -153,38 +160,39 @@ class Xray(SedModule):
         """
         # Stellar info.
         # Star formation rate, units: M_sun/yr
-        sfr = sed.info['sfh.sfr100Myrs']
+        sfr = sed.info["sfh.sfr100Myrs"]
 
         # stellar mass, units: 1e10 M_sun
-        if 'stellar.m_star' in sed.info:
-            mstar = sed.info['stellar.m_star'] * 1e-10
-        elif 'stellar.mass_total' in sed.info:
-            mstar = sed.info['stellar.mass_total'] * 1e-10
+        if "stellar.m_star" in sed.info:
+            mstar = sed.info["stellar.m_star"] * 1e-10
+        elif "stellar.mass_total" in sed.info:
+            mstar = sed.info["stellar.mass_total"] * 1e-10
         else:
             raise Exception("A stellar module is required.")
 
         # log stellar age, units: Gyr
-        logT = np.log10(sed.info['stellar.age_m_star'] * 1e-3)
+        logT = np.log10(sed.info["stellar.age_m_star"] * 1e-3)
 
         # log metallicity, units: none
-        Z = sed.info['stellar.metallicity']
+        Z = sed.info["stellar.metallicity"]
 
         # Get AGN viewing angle and 2500A intrinsic luminosity (at 30 deg)
-        if 'agn.i' in sed.info:
+        if "agn.i" in sed.info:
             # SKIRTOR model
-            cosi = np.cos(np.radians(sed.info['agn.i']))
-        elif 'agn.psy' in sed.info:
+            cosi = np.cos(np.radians(sed.info["agn.i"]))
+        elif "agn.psy" in sed.info:
             # Fritz model
-            cosi = np.sin(np.radians(sed.info['agn.psy']))
+            cosi = np.sin(np.radians(sed.info["agn.psy"]))
         else:
             cosi = 0
-        if 'agn.intrin_Lnu_2500A_30deg' not in sed.info:
-            sed.add_info('agn.intrin_Lnu_2500A_30deg', 0., True, unit='W/Hz')
-        Lnu_2500A = sed.info['agn.intrin_Lnu_2500A_30deg']
+        if "agn.intrin_Lnu_2500A_30deg" not in sed.info:
+            sed.add_info("agn.intrin_Lnu_2500A_30deg", 0.0, True, unit="W/Hz")
+        Lnu_2500A = sed.info["agn.intrin_Lnu_2500A_30deg"]
 
         # Add the configuration for X-ray module
         sed.add_module(self.name, self.parameters)
         sed.add_info("xray.gam", self.gam)
+        sed.add_info("xray.E_cut", self.E_cut, unit="keV")
         sed.add_info("xray.det_lmxb", self.det_lmxb)
         sed.add_info("xray.det_hmxb", self.det_hmxb)
         sed.add_info("xray.alpha_ox", self.alpha_ox)
@@ -231,23 +239,24 @@ class Xray(SedModule):
 
         # Save the results
         sed.add_info(
-            "xray.hotgas_Lx_0p5to2keV", l_hotgas_0p5to2keV, True, unit='W'
+            "xray.hotgas_Lx_0p5to2keV", l_hotgas_0p5to2keV, True, unit="W"
         )
-        sed.add_info("xray.hmxb_Lx_2to10keV", l_hmxb_2to10keV, True, unit='W')
-        sed.add_info("xray.lmxb_Lx_2to10keV", l_lmxb_2to10keV, True, unit='W')
-        sed.add_info("xray.agn_Lx_total", l_agn_total, True, unit='W')
-        sed.add_info("xray.agn_Lx_2to10keV", l_agn_2to10keV, True, unit='W')
-        sed.add_info("xray.agn_Lnu_2keV_30deg", Lnu_2keV, True, unit='W/Hz')
+        sed.add_info("xray.hmxb_Lx_2to10keV", l_hmxb_2to10keV, True, unit="W")
+        sed.add_info("xray.lmxb_Lx_2to10keV", l_lmxb_2to10keV, True, unit="W")
+        sed.add_info("xray.agn_Lx_total", l_agn_total, True, unit="W")
+        sed.add_info("xray.agn_Lx_2to10keV", l_agn_2to10keV, True, unit="W")
+        sed.add_info("xray.agn_Lnu_2keV_30deg", Lnu_2keV, True, unit="W/Hz")
 
         # Add the SED components
         sed.add_contribution(
-            'xray.galaxy',
+            "xray.galaxy",
             self.wave,
             self.lumin_hotgas * l_hotgas_0p5to2keV
             + self.lumin_lmxb * l_lmxb_2to10keV
-            + self.lumin_hmxb * l_hmxb_2to10keV
+            + self.lumin_hmxb * l_hmxb_2to10keV,
         )
-        sed.add_contribution('xray.agn', self.wave, self.lumin_corona * scl_fac)
+        sed.add_contribution("xray.agn", self.wave, self.lumin_corona * scl_fac)
+
 
 # SedModule to be returned by get_module
 Module = Xray

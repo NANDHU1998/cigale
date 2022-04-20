@@ -11,6 +11,8 @@ import numpy as np
 
 from . import SedModule
 
+__category__ = "SFH"
+
 
 class Sfh2Exp(SedModule):
     """Double decreasing exponential Star Formation History

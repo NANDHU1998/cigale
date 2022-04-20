@@ -12,6 +12,8 @@ import scipy.constants as cst
 
 from . import SedModule
 
+__category__ = "radio"
+
 
 class Radio(SedModule):
     """Radio emission

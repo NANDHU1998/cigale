@@ -25,6 +25,8 @@ import numpy as np
 
 from . import SedModule
 
+__category__ = "dust attenuation"
+
 
 def alambda_av(wl, delta):
     """Compute the complete attenuation curve A(λ)/Av

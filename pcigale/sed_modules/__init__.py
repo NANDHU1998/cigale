@@ -2,8 +2,6 @@ import os
 import inspect
 from importlib import import_module
 
-from pcigale.utils.console import console, ERROR
-
 
 def complete_parameters(given_parameters, parameter_list):
     """Complete the given parameter list with the default values

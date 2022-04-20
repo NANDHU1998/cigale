@@ -7,17 +7,14 @@ import numpy as np
 from scipy import optimize
 from scipy.special import erf
 
-log.setLevel('ERROR')
+log.setLevel("ERROR")
 
 
 def save_chi2(obs, variable, models, chi2, values):
-    """Save the chi² and the associated physocal properties
-
-    """
-    fname = Path('out') / f"{obs.id}_{variable.replace('/', '_')}_chi2-block-" \
+    """Save the chi² and the associated physocal properties."""
+    fname = Path("out") / f"{obs.id}_{variable.replace('/', '_')}_chi2-block-" \
         f"{models.iblock}.npy"
-    data = np.memmap(fname, dtype=np.float64, mode='w+',
-                     shape=(2, chi2.size))
+    data = np.memmap(fname, dtype=np.float64, mode="w+", shape=(2, chi2.size))
     data[0, :] = chi2
     data[1, :] = values
 
@@ -41,8 +38,11 @@ def compute_corr_dz(model_z, obs):
         Object containing the distance and redshift of an object
 
     """
-    return (obs.distance / luminosity_distance(model_z)) ** 2. * \
-           (1. + model_z) / (1. + obs.redshift)
+    return (
+        (obs.distance / luminosity_distance(model_z)) ** 2.0
+        * (1.0 + model_z)
+        / (1.0 + obs.redshift)
+    )
 
 
 def dchi2_over_ds2(s, obsdata, obsdata_err, obslim, obslim_err, moddata,
@@ -82,8 +82,9 @@ def dchi2_over_ds2(s, obsdata, obsdata_err, obslim, obslim_err, moddata,
     # The mask "lim" selects the filter(s) for which upper limits are given
     # i.e., when obs_errors < 0
     sqrt2 = np.sqrt(2)
-    dchi2_over_ds_data = np.sum((obsdata - s * moddata) *
-                                moddata / obsdata_err**2.)
+    dchi2_over_ds_data = np.sum(
+        (obsdata - s * moddata) * moddata / obsdata_err ** 2.0
+    )
 
     dchi2_over_ds_lim = np.sqrt(2. / np.pi) * np.sum(
         modlim * np.exp(
@@ -129,18 +130,18 @@ def _compute_scaling(models, obs, corr_dz, wz):
     for band, flux in obs.flux.items():
         # Multiplications are faster than divisions, so we directly use the
         # inverse error
-        inv_err2 = 1. / obs.flux_err[band] ** 2.
+        inv_err2 = 1.0 / obs.flux_err[band] ** 2.0
         model = models.flux[band][wz]
         num += model * (flux * inv_err2)
-        denom += model ** 2. * inv_err2
+        denom += model ** 2.0 * inv_err2
 
     for name, prop in obs.extprop.items():
         # Multiplications are faster than divisions, so we directly use the
         # inverse error
-        inv_err2 = 1. / obs.extprop_err[name] ** 2.
+        inv_err2 = 1.0 / obs.extprop_err[name] ** 2.0
         model = models.extprop[name][wz]
         num += model * (prop * inv_err2 * corr_dz)
-        denom += model ** 2. * (inv_err2 * corr_dz ** 2.)
+        denom += model ** 2.0 * (inv_err2 * corr_dz ** 2.0)
 
     return num / denom
 
@@ -192,10 +193,11 @@ def _correct_scaling_ul(scaling, mod, obs, wz):
         modlim += [modextprop[k][imod] for k in extpropulkeys]
         moddata = np.array(moddata)
         modlim = np.array(modlim)
-        scaling[imod] = optimize.root(dchi2_over_ds2, scaling[imod],
-                                      args=(obsdata, obsdata_err,
-                                            obslim, obslim_err,
-                                            moddata, modlim)).x
+        scaling[imod] = optimize.root(
+            dchi2_over_ds2,
+            scaling[imod],
+            args=(obsdata, obsdata_err, obslim, obslim_err, moddata, modlim),
+        ).x
 
 
 def compute_chi2(models, obs, corr_dz, wz, lim_flag):
@@ -235,7 +237,7 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
 
     # Some observations may not have flux values in some filter(s), but
     # they can have upper limit(s).
-    limits = (len(obs.flux_ul) > 0 or len(obs.extprop_ul) > 0)
+    limits = len(obs.flux_ul) > 0 or len(obs.extprop_ul) > 0
     if limits is True and lim_flag == "full":
         _correct_scaling_ul(scaling, models, obs, wz)
 
@@ -246,35 +248,51 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
     for band, flux in obs.flux.items():
         # Multiplications are faster than divisions, so we directly use the
         # inverse error
-        inv_flux_err = 1. / obs.flux_err[band]
+        inv_flux_err = 1.0 / obs.flux_err[band]
         model = models.flux[band][wz]
-        chi2 += ((model * scaling - flux) * inv_flux_err) ** 2.
+        chi2 += ((model * scaling - flux) * inv_flux_err) ** 2.0
 
     # Penalize det_alpha_ox which lie out of the user-set range
-    if (('xray' in models.params.modules) and
-        (models.conf['sed_modules_params']['xray']['max_dev_alpha_ox'] > 0)):
+    if ("xray" in models.params.modules) and (
+        models.conf["sed_modules_params"]["xray"]["max_dev_alpha_ox"] > 0
+    ):
         # Get the model indices that have valid AGN component
-        agn_idxs = np.where(models.extprop['agn.intrin_Lnu_2500A_30deg'][wz] > 0)[0]
+        agn_idxs = np.where(
+            models.extprop["agn.intrin_Lnu_2500A_30deg"][wz] > 0
+        )[0]
         # Calculate expected alpha_ox from Lnu_2500 (Just et al. 2007)
-        exp_alpha_ox = -0.137 * np.log10(models.extprop['agn.intrin_Lnu_2500A_30deg'][wz][agn_idxs] * 1e7 * scaling[agn_idxs]) + 2.638
+        exp_alpha_ox = (
+            -0.137
+            * np.log10(
+                models.extprop["agn.intrin_Lnu_2500A_30deg"][wz][agn_idxs]
+                * 1e7
+                * scaling[agn_idxs]
+            )
+            + 2.638
+        )
         # Calculate det_alpha_ox = alpha_ox - alpha_ox(Lnu_2500)
-        det_alpha_ox = models.intprop['xray.alpha_ox'][wz][agn_idxs] - exp_alpha_ox
+        det_alpha_ox = (
+            models.intprop["xray.alpha_ox"][wz][agn_idxs] - exp_alpha_ox
+        )
         # If det_alpha_ox out of range, set corresponding chi2 to nan
-        nan_idxs = agn_idxs[np.abs(det_alpha_ox) > models.conf['sed_modules_params']['xray']['max_dev_alpha_ox']]
+        nan_idxs = agn_idxs[
+            np.abs(det_alpha_ox)
+            > models.conf["sed_modules_params"]["xray"]["max_dev_alpha_ox"]
+        ]
         chi2[nan_idxs] = np.nan
 
     # Computation of the χ² from intensive properties
     for name, prop in obs.intprop.items():
         model = models.intprop[name][wz]
-        chi2 += ((model - prop) * (1. / obs.intprop_err[name])) ** 2.
+        chi2 += ((model - prop) * (1.0 / obs.intprop_err[name])) ** 2.0
 
     # Computation of the χ² from extensive properties
     for name, prop in obs.extprop.items():
         # Multiplications are faster than divisions, so we directly use the
         # inverse error
-        inv_prop_err = 1. / obs.extprop_err[name]
+        inv_prop_err = 1.0 / obs.extprop_err[name]
         model = models.extprop[name][wz]
-        chi2 += (((scaling * model) * corr_dz - prop) * inv_prop_err) ** 2.
+        chi2 += (((scaling * model) * corr_dz - prop) * inv_prop_err) ** 2.0
 
     # Finally take the presence of upper limits into account
     if limits is True and lim_flag != "none":
@@ -313,8 +331,8 @@ def weighted_param(param, weights):
 
     """
 
-    mean = np.einsum('i, i', param, weights)
+    mean = np.einsum("i, i", param, weights)
     delta = param - mean
-    std = np.sqrt(np.einsum('i, i, i', weights, delta, delta))
+    std = np.sqrt(np.einsum("i, i, i", weights, delta, delta))
 
     return (mean, std)

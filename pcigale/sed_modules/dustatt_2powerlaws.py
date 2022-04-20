@@ -23,6 +23,8 @@ import numpy as np
 
 from . import SedModule
 
+__category__ = "dust attenuation"
+
 
 def power_law(wavelength, delta):
     """Compute the power law (λ / λv)^δ

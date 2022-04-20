@@ -22,6 +22,8 @@ import numpy as np
 
 from . import SedModule
 
+__category__ = "SFH"
+
 
 class SfhBuat08(SedModule):
     """Chemical evolution motivated Star Formation History

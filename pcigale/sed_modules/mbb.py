@@ -15,6 +15,8 @@ import scipy.constants as cst
 
 from . import SedModule
 
+__category__ = "dust emission"
+
 
 class MBB(SedModule):
     """One modified black body IR re-emission

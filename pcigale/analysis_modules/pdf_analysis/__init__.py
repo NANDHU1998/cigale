@@ -22,7 +22,7 @@ import multiprocessing as mp
 import numpy as np
 
 from .. import AnalysisModule
-from utils.counter import Counter
+from pcigale.utils.counter import Counter
 from .workers import sed as worker_sed
 from .workers import init_sed as init_worker_sed
 from .workers import init_analysis as init_worker_analysis
@@ -34,6 +34,7 @@ from ...managers.models import ModelsManager
 from ...managers.observations import ObservationsManager
 from ...managers.parameters import ParametersManager
 from pcigale.utils.console import console, INFO
+
 
 class PdfAnalysis(AnalysisModule):
     """PDF analysis module"""
@@ -104,8 +105,13 @@ class PdfAnalysis(AnalysisModule):
         counter = Counter(len(params.blocks[iblock]), 50, "Model")
         initargs = (models, counter)
 
-        self._parallel_job(worker_sed, params.blocks[iblock], initargs,
-                           init_worker_sed, conf['cores'])
+        self._parallel_job(
+            worker_sed,
+            params.blocks[iblock],
+            initargs,
+            init_worker_sed,
+            conf["cores"]
+        )
 
         # Print the final value as it may not otherwise be printed
         counter.global_counter.value = len(params.blocks[iblock])
@@ -118,8 +124,14 @@ class PdfAnalysis(AnalysisModule):
         results = ResultsManager(models)
         counter = Counter(len(obs), 1, "Object")
         initargs = (models, results, counter)
-        self._parallel_job(worker_analysis, obs, initargs,
-                           init_worker_analysis, conf['cores'], 1)
+        self._parallel_job(
+            worker_analysis,
+            obs,
+            initargs,
+            init_worker_analysis,
+            conf["cores"],
+            1
+        )
         counter.progress.join()
         console.print(f"{INFO} Done.")
 
@@ -128,8 +140,9 @@ class PdfAnalysis(AnalysisModule):
     def _compute_best(self, conf, obs, params, results):
         counter = Counter(len(obs), 1, "Object")
         initargs = (conf, params, obs, results, counter)
-        self._parallel_job(worker_bestfit, obs, initargs,
-                           init_worker_bestfit, conf['cores'], 1)
+        self._parallel_job(
+            worker_bestfit, obs, initargs, init_worker_bestfit, conf["cores"], 1
+        )
         counter.progress.join()
         console.print(f"{INFO} Done.")
 
@@ -140,9 +153,22 @@ class PdfAnalysis(AnalysisModule):
             for idx, item in enumerate(items):
                 worker(idx, item)
         else:  # run in parallel
-            with mp.Pool(processes=ncores, initializer=initializer,
-                         initargs=initargs) as pool:
+            # Temporarily remove the counter sub-process that updates the
+            # progress bar as it cannot be pickled when creating the parallel
+            # processes when using the "spawn" starting method.
+            for arg in initargs:
+                if isinstance(arg, Counter):
+                    counter = arg
+                    progress = counter.progress
+                    counter.progress = None
+
+            with mp.Pool(
+                processes=ncores, initializer=initializer, initargs=initargs
+            ) as pool:
                 pool.starmap(worker, enumerate(items), chunksize)
+
+            # After the parallel processes have exited, it can be restored
+            counter.progress = progress
 
     def _compute(self, conf, obs, params):
         results = []
@@ -151,7 +177,7 @@ class PdfAnalysis(AnalysisModule):
             console.rule(f"Block {iblock + 1}/{nblocks}")
             # We keep the models if there is only one block. This allows to
             # avoid recomputing the models when we do a mock analysis
-            if not hasattr(self, '_models'):
+            if not hasattr(self, "_models"):
                 console.print(f"{INFO} Computing models.")
                 models = self._compute_models(conf, obs, params, iblock)
                 if nblocks == 1:
@@ -189,7 +215,7 @@ class PdfAnalysis(AnalysisModule):
             Contents of pcigale.ini in the form of a dictionary
 
         """
-        np.seterr(invalid='ignore')
+        np.seterr(invalid="ignore")
 
         console.print(f"{INFO} Initialising the analysis module.")
 
@@ -204,7 +230,7 @@ class PdfAnalysis(AnalysisModule):
         # all the required fluxes are present, adding errors if needed,
         # discarding invalid fluxes, etc.
         obs = ObservationsManager(conf, params)
-        obs.save('observations')
+        obs.save("observations")
 
         results = self._compute(conf, obs, params)
         console.print(f"{INFO} Sanity check of the analysis results.")
@@ -213,16 +239,16 @@ class PdfAnalysis(AnalysisModule):
         console.print(f"{INFO} Saving the analysis results.")
         results.save("results")
 
-        if conf['analysis_params']['mock_flag'] is True:
+        if conf["analysis_params"]["mock_flag"] is True:
             console.print(f"{INFO} Analysing the mock observations.")
 
             # For the mock analysis we do not save the ancillary files.
-            for k in ['best_sed', 'chi2']:
-                conf['analysis_params'][f"save_{k}"] = False
+            for k in ["best_sed", "chi2"]:
+                conf["analysis_params"][f"save_{k}"] = False
 
             # We replace the observations with a mock catalogue..
             obs.generate_mock(results)
-            obs.save('mock_observations')
+            obs.save("mock_observations")
 
             results = self._compute(conf, obs, params)
 

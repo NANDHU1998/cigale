@@ -16,6 +16,8 @@ from scipy.interpolate import interp1d
 from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
+__category__ = "AGN"
+
 
 @lru_cache
 def k_ext_short(ext_law):
@@ -153,39 +155,39 @@ class SKIRTOR2016(SedModule):
             "Average edge-on optical depth at 9.7 micron; the actual one along"
             "the line of sight may vary depending on the clumps distribution. "
             "Possible values are: 3, 5, 7, 9, and 11.",
-            7
+            7,
         ),
         "pl": (
             "cigale_list(options=0. & .5 & 1. & 1.5)",
             "Power-law exponent that sets radial gradient of dust density."
             "Possible values are: 0., 0.5, 1., and 1.5.",
-            1.0
+            1.0,
         ),
         "q": (
             "cigale_list(options=0. & .5 & 1. & 1.5)",
             "Index that sets dust density gradient with polar angle."
             "Possible values are:  0., 0.5, 1., and 1.5.",
-            1.0
+            1.0,
         ),
         "oa": (
             "cigale_list(options=10 & 20 & 30 & 40 & 50 & 60 & 70 & 80)",
             "Angle measured between the equatorial plane and edge of the torus. "
             "Half-opening angle of the dust-free (or polar-dust) cone is 90°-oa. "
             "Possible values are: 10, 20, 30, 40, 50, 60, 70, and 80",
-            40
+            40,
         ),
         "R": (
             "cigale_list(options=10 & 20 & 30)",
             "Ratio of outer to inner radius, R_out/R_in."
             "Possible values are: 10, 20, and 30",
-            20
+            20,
         ),
         "Mcl": (
             "cigale_list(options=0.97)",
             "fraction of total dust mass inside clumps. 0.97 means 97% of "
             "total mass is inside the clumps and 3% in the interclump dust. "
             "Possible values are: 0.97.",
-            0.97
+            0.97,
         ),
         "i": (
             "cigale_list(options=0 & 10 & 20 & 30 & 40 & 50 & 60 & 70 & 80 & 90)",
@@ -193,54 +195,54 @@ class SKIRTOR2016(SedModule):
             "w.r.t. the AGN axis. i=[0, 90°-oa): face-on, type 1 view; "
             "i=[90°-oa, 90°]: edge-on, type 2 view. "
             "Possible values are: 0, 10, 20, 30, 40, 50, 60, 70, 80, and 90.",
-            30
+            30,
         ),
         "disk_type": (
             "integer(min=0, max=1)",
             "Disk spectrum: 0 for the regular Skirtor spectrum, 1 for the "
             "Schartmann (2005) spectrum.",
-            1
+            1,
         ),
         "delta": (
             "cigale_list()",
             "Power-law of index δ modifying the optical slop of the disk. "
             "Negative values make the slope steeper where as positive values "
             "make it shallower.",
-            -0.27
+            -0.36,
         ),
         "fracAGN": (
             "cigale_list(minvalue=0., maxvalue=1.)",
             "AGN fraction.",
-            0.1
+            0.1,
         ),
         "lambda_fracAGN": (
             "string()",
             "Wavelength range in microns where to compute the AGN fraction. "
             "Note that it includes all the components, not just dust emission. "
             "To use the the total dust luminosity set to 0/0.",
-            "0/0"
+            "0/0",
         ),
         "law": (
             "cigale_list(dtype=int, options=0 & 1 & 2)",
             "Extinction law of the polar dust: "
             "0 (SMC), 1 (Calzetti 2000), or 2 (Gaskell et al. 2004)",
-            0
+            0,
         ),
         "EBV": (
             "cigale_list(minvalue=0.)",
             "E(B-V) for the extinction in the polar direction in magnitudes.",
-            0.04
+            0.03,
         ),
         "temperature": (
             "cigale_list(minvalue=0.)",
             "Temperature of the polar dust in K.",
-            100.0
+            100.0,
         ),
         "emissivity": (
             "cigale_list(minvalue=0.)",
             "Emissivity index of the polar dust.",
-            1.6
-        )
+            1.6,
+        ),
     }
 
     def _init_code(self):
@@ -282,7 +284,7 @@ class SKIRTOR2016(SedModule):
                 oa=self.oa,
                 R=self.R,
                 Mcl=self.Mcl,
-                i=self.i
+                i=self.i,
             )
             AGN1 = db.get(
                 t=self.t,
@@ -291,7 +293,7 @@ class SKIRTOR2016(SedModule):
                 oa=self.oa,
                 R=self.R,
                 Mcl=self.Mcl,
-                i=0
+                i=0,
             )
         # Re-normalise AGN1, to be consistent with the intrinsic AGN
         # luminosity of SKIRTOR2016
@@ -401,13 +403,13 @@ class SKIRTOR2016(SedModule):
                 [
                     self.lambdamin_fracAGN,
                     self.SKIRTOR2016.wl[w],
-                    self.lambdamax_fracAGN
+                    self.lambdamax_fracAGN,
                 ]
             )
             spec = np.interp(
                 wl,
                 self.SKIRTOR2016.wl,
-                self.SKIRTOR2016.dust + self.SKIRTOR2016.disk
+                self.SKIRTOR2016.dust + self.SKIRTOR2016.disk,
             )
             self.AGNlumin = np.trapz(spec, x=wl)
         elif (self.lambdamin_fracAGN == 0.0) & (self.lambdamax_fracAGN == 0.0):
@@ -416,7 +418,7 @@ class SKIRTOR2016(SedModule):
             self.AGNlumin = np.interp(
                 self.lambdamin_fracAGN,
                 self.SKIRTOR2016.wl,
-                self.SKIRTOR2016.dust + self.SKIRTOR2016.disk
+                self.SKIRTOR2016.dust + self.SKIRTOR2016.disk,
             )
         # Store the SED wavelengths
         self.wl = None
@@ -462,7 +464,7 @@ class SKIRTOR2016(SedModule):
                     [
                         self.lambdamin_fracAGN,
                         sed.wavelength_grid[w],
-                        self.lambdamax_fracAGN
+                        self.lambdamax_fracAGN,
                     ]
                 )
             spec = np.interp(self.wl, sed.wavelength_grid, sed.luminosity)
@@ -488,8 +490,15 @@ class SKIRTOR2016(SedModule):
         # lumin_intrin_disk is calculated at viewing angle of 30°.
         power_accretion = agn_power * self.lumin_intrin_disk * 0.493
         l_agn_2500A = agn_power * self.l_agn_2500A
-        L6_agn = np.interp(6000, self.SKIRTOR2016.wl,
-                 self.SKIRTOR2016.dust + self.SKIRTOR2016.disk) * agn_power * 6000
+        L6_agn = (
+            np.interp(
+                6000,
+                self.SKIRTOR2016.wl,
+                self.SKIRTOR2016.dust + self.SKIRTOR2016.disk,
+            )
+            * agn_power
+            * 6000
+        )
 
         sed.add_info("agn.total_dust_luminosity", lumin_dust, True, unit="W")
         sed.add_info(
@@ -502,22 +511,22 @@ class SKIRTOR2016(SedModule):
         sed.add_info(
             "agn.intrin_Lnu_2500A_30deg", l_agn_2500A, True, unit="W/Hz"
         )
-        sed.add_info('agn.L_6um', L6_agn, True, unit='W')
+        sed.add_info("agn.L_6um", L6_agn, True, unit="W")
 
         sed.add_contribution(
             "agn.SKIRTOR2016_torus",
             self.SKIRTOR2016.wl,
-            agn_power * (self.SKIRTOR2016.dust - self.SKIRTOR2016.polar_dust)
+            agn_power * (self.SKIRTOR2016.dust - self.SKIRTOR2016.polar_dust),
         )
         sed.add_contribution(
             "agn.SKIRTOR2016_polar_dust",
             self.SKIRTOR2016.wl,
-            agn_power * (self.SKIRTOR2016.polar_dust)
+            agn_power * (self.SKIRTOR2016.polar_dust),
         )
         sed.add_contribution(
             "agn.SKIRTOR2016_disk",
             self.SKIRTOR2016.wl,
-            agn_power * self.SKIRTOR2016.disk
+            agn_power * self.SKIRTOR2016.disk,
         )
 
 

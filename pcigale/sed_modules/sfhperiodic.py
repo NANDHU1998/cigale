@@ -12,6 +12,8 @@ import numpy as np
 
 from . import SedModule
 
+__category__ = "SFH"
+
 
 class SfhPeriodic(SedModule):
     """Several regularly-spaced short delayed-SFH SF events
@@ -84,7 +86,7 @@ class SfhPeriodic(SedModule):
         else:
             raise Exception(f"Burst type {self.type_bursts} unknown.")
 
-        for t_burst in np.arange(0, age, self.delta_bursts):
+        for _ in np.arange(0, age, self.delta_bursts):
             self.sfr += burst
             burst = np.roll(burst, self.delta_bursts)
             burst[:self.delta_bursts] = 0.

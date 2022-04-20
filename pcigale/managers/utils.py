@@ -47,11 +47,11 @@ class SharedArray:
         # By default RawArray initialises all the elements to 0. Setting them to
         # np.nan is preferable in case for a reason some elements are never
         # assigned a value during a run. Note that in case the shared array is
-        # not of a float type and is of size 1 it will fail, se we work around
+        # not of a float type and is of size 1 it will fail, so we work around
         # this with a try.
         try:
             self.array[:] = np.nan
-        except:
+        except Exception:
             pass
 
     def __setitem__(self, idx, data):

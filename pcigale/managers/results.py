@@ -311,7 +311,7 @@ class BestResultsManager:
         # fitted. We warn the user in that case
         bad = [str(id_) for id_ in self.obs.table['id'][np.isnan(self.chi2)]]
         if len(bad) > 0:
-            console.print("{ERROR} No suitable model found for "
+            console.print(f"{ERROR} No suitable model found for "
                           f"{', '.join(bad)}. It may be that models are older "
                           "than the universe or that the χ² are very large.")
 

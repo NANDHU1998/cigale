@@ -19,6 +19,8 @@ from ..utils.cosmology import age, luminosity_distance
 
 from . import SedModule
 
+__category__ = "redshifting"
+
 
 def igm_transmission(wavelength, redshift):
     """Intergalactic transmission (Meiksin, 2006)

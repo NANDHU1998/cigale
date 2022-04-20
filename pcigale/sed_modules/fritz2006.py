@@ -16,6 +16,9 @@ from scipy.interpolate import interp1d
 from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
+__category__ = "AGN"
+
+
 @lru_cache
 def k_ext_short(ext_law):
     if ext_law == 0:
@@ -32,6 +35,7 @@ def k_ext_short(ext_law):
     AB, AV = np.interp([440., 550.], wl, curve['ext'])
 
     return interp1d(wl, curve['ext'] / (AB - AV))
+
 
 def k_ext(wavelength, ext_law):
     """
@@ -90,6 +94,7 @@ def k_ext(wavelength, ext_law):
 
     return k
 
+
 def disk(wl, limits, coefs):
     ss = np.searchsorted(wl, limits)
     wpl = [slice(lo, hi) for lo, hi in zip(ss[:-1], ss[1:])]
@@ -104,6 +109,7 @@ def disk(wl, limits, coefs):
         spectrum[w] = wl[w]**coef * norm
 
     return spectrum * (1. / np.trapz(spectrum, x=wl))
+
 
 def schartmann2005_disk(wl, delta=0.):
     limits = np.array([8., 50., 125., 10000., 1e6])
@@ -191,7 +197,7 @@ class Fritz2006(SedModule):
             "Power-law of index δ modifying the optical slop of the disk. "
             "Negative values make the slope steeper where as positive values "
             "make it shallower.",
-            -0.27
+            -0.36
         ),
         'fracAGN': (
             'cigale_list(minvalue=0., maxvalue=1.)',
@@ -214,7 +220,7 @@ class Fritz2006(SedModule):
         'EBV': (
             'cigale_list(minvalue=0.)',
             "E(B-V) for the extinction in the polar direction in magnitudes.",
-            0.04
+            0.03
         ),
         'temperature': (
             'cigale_list(minvalue=0.)',
