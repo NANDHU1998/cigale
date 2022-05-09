@@ -7,6 +7,7 @@ class SedCache:
     cache the SED in a dictionary with the number of modules as the key. The
     parameters are also save with the SED in a tuple to allow
     """
+
     def __init__(self):
         self.dict = {}
 

@@ -20,6 +20,8 @@ from scipy.constants import c, parsec
 from . import SedModule
 from ..sed.utils import flux_trapz
 
+__category__ = "restframe_parameters"
+
 
 class RestframeParam(SedModule):
     """Compute miscellaneous parameters on the full SED. This is a separate
@@ -32,7 +34,8 @@ class RestframeParam(SedModule):
     parameter_list = {
         "beta_calz94": (
             "boolean()",
-            "UV slope measured in the same way as in Calzetti et al. (1994).",
+            "Observed and intrinsic UV slopes β and β₀ measured in the same "
+            "way as in Calzetti et al. (1994).",
             False
         ),
         "D4000": (
@@ -68,9 +71,18 @@ class RestframeParam(SedModule):
         )
     }
 
+    @staticmethod
+    def _slope(x, y):
+        """Computes the slope of y vs x from the covariance matrix.
+        """
+        X = np.stack((x, y), axis=0)
+        X -= np.average(X, axis=1)[:, None]
+        ssxm, ssxym, _, _ = np.dot(X, X.T).flat
+
+        return ssxym / ssxm
+
     def calz94(self, sed):
         wl = sed.wavelength_grid
-        lumin = sed.luminosity
 
         # Attenuated (observed) UV slopes beta as defined in Calzetti et al.
         # (1994, ApJ 429, 582, Tab. 2) that excludes the 217.5 nm bump
@@ -92,13 +104,13 @@ class RestframeParam(SedModule):
 
             self.w_calz94[key] = w_calz94
 
-        # We compute the regression directly from the covariance matrix as the
-        # numpy/scipy regression routines are quite slow.
-        ssxm, ssxym, _, _ = np.cov(np.log10(wl[w_calz94]),
-                                   np.log10(lumin[w_calz94]),
-                                   bias=1).flat
+        lgwl = np.log10(wl[w_calz94])
+        lglumin = np.log10(sed.luminosity[w_calz94])
+        lglumin0 = np.log10(np.sum([sed.luminosities[k][w_calz94]
+                                    for k in sed.luminosities
+                                    if 'attenuation' not in k], axis=0))
 
-        return ssxym / ssxm
+        return (self._slope(lgwl, lglumin), self._slope(lgwl, lglumin0))
 
     def D4000(self, sed):
         wl = sed.wavelength_grid
@@ -204,7 +216,9 @@ class RestframeParam(SedModule):
         fluxes = {filt: sed.compute_fnu(filt) for filt in self.filters}
 
         if self.parameters['beta_calz94']:
-            sed.add_info("param.beta_calz94", self.calz94(sed))
+            beta, beta0 = self.calz94(sed)
+            sed.add_info("param.beta_calz94", beta)
+            sed.add_info("param.beta0_calz94", beta0)
         if self.parameters['D4000']:
             sed.add_info("param.D_4000", self.D4000(sed))
         if self.parameters['IRX']:

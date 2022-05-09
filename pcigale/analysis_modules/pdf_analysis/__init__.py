@@ -22,7 +22,7 @@ import multiprocessing as mp
 import numpy as np
 
 from .. import AnalysisModule
-from utils.counter import Counter
+from pcigale.utils.counter import Counter
 from .workers import sed as worker_sed
 from .workers import init_sed as init_worker_sed
 from .workers import init_analysis as init_worker_analysis
@@ -33,6 +33,7 @@ from ...managers.results import ResultsManager
 from ...managers.models import ModelsManager
 from ...managers.observations import ObservationsManager
 from ...managers.parameters import ParametersManager
+from pcigale.utils.console import console, INFO
 
 
 class PdfAnalysis(AnalysisModule):
@@ -65,10 +66,16 @@ class PdfAnalysis(AnalysisModule):
             "none"
         ),
         "lim_flag": (
-            "boolean()",
-            "If true, for each object check whether upper limits are present "
-            "and analyse them.",
-            False
+            "option('full', 'noscaling', 'none')",
+            "Take into account upper limits. If 'full', the exact computation "
+            "is done. If 'noscaling', the scaling of the models will not be "
+            "adjusted but the χ² will include the upper limits adequately. "
+            "Waiving the adjustment makes the fitting much faster compared to "
+            "the 'full' option while generally not affecting the results in "
+            "any substantial manner. This is the recommended option as it "
+            "achieves a good balance between speed and reliability. Finally, "
+            "'none' simply discards bands with upper limits.",
+            "noscaling"
         ),
         "mock_flag": (
             "boolean()",
@@ -95,31 +102,49 @@ class PdfAnalysis(AnalysisModule):
 
     def _compute_models(self, conf, obs, params, iblock):
         models = ModelsManager(conf, obs, params, iblock)
-        counter = Counter(len(params.blocks[iblock]), 50, 250)
+        counter = Counter(len(params.blocks[iblock]), 50, "Model")
         initargs = (models, counter)
 
-        self._parallel_job(worker_sed, params.blocks[iblock], initargs,
-                           init_worker_sed, conf['cores'])
+        self._parallel_job(
+            worker_sed,
+            params.blocks[iblock],
+            initargs,
+            init_worker_sed,
+            conf["cores"]
+        )
 
         # Print the final value as it may not otherwise be printed
-        if counter.global_counter.value % 250 != 0:
-            counter.pprint(len(params.blocks[iblock]))
+        counter.global_counter.value = len(params.blocks[iblock])
+        counter.progress.join()
+        console.print(f"{INFO} Done.")
 
         return models
 
     def _compute_bayes(self, conf, obs, models):
         results = ResultsManager(models)
-
-        initargs = (models, results, Counter(len(obs)))
-        self._parallel_job(worker_analysis, obs, initargs,
-                           init_worker_analysis, conf['cores'], 1)
+        counter = Counter(len(obs), 1, "Object")
+        initargs = (models, results, counter)
+        self._parallel_job(
+            worker_analysis,
+            obs,
+            initargs,
+            init_worker_analysis,
+            conf["cores"],
+            1
+        )
+        counter.progress.join()
+        console.print(f"{INFO} Done.")
 
         return results
 
     def _compute_best(self, conf, obs, params, results):
-        initargs = (conf, params, obs, results, Counter(len(obs)))
-        self._parallel_job(worker_bestfit, obs, initargs,
-                           init_worker_bestfit, conf['cores'], 1)
+        counter = Counter(len(obs), 1, "Object")
+        initargs = (conf, params, obs, results, counter)
+        self._parallel_job(
+            worker_bestfit, obs, initargs, init_worker_bestfit, conf["cores"], 1
+        )
+        counter.progress.join()
+        console.print(f"{INFO} Done.")
 
     def _parallel_job(self, worker, items, initargs, initializer, ncores,
                       chunksize=None):
@@ -128,35 +153,49 @@ class PdfAnalysis(AnalysisModule):
             for idx, item in enumerate(items):
                 worker(idx, item)
         else:  # run in parallel
-            with mp.Pool(processes=ncores, initializer=initializer,
-                         initargs=initargs) as pool:
+            # Temporarily remove the counter sub-process that updates the
+            # progress bar as it cannot be pickled when creating the parallel
+            # processes when using the "spawn" starting method.
+            for arg in initargs:
+                if isinstance(arg, Counter):
+                    counter = arg
+                    progress = counter.progress
+                    counter.progress = None
+
+            with mp.Pool(
+                processes=ncores, initializer=initializer, initargs=initargs
+            ) as pool:
                 pool.starmap(worker, enumerate(items), chunksize)
+
+            # After the parallel processes have exited, it can be restored
+            counter.progress = progress
 
     def _compute(self, conf, obs, params):
         results = []
         nblocks = len(params.blocks)
         for iblock in range(nblocks):
-            print(f"\nProcessing block {iblock + 1}/{nblocks}...")
+            console.rule(f"Block {iblock + 1}/{nblocks}")
             # We keep the models if there is only one block. This allows to
             # avoid recomputing the models when we do a mock analysis
-            if not hasattr(self, '_models'):
-                print("\nComputing models ...")
+            if not hasattr(self, "_models"):
+                console.print(f"{INFO} Computing models.")
                 models = self._compute_models(conf, obs, params, iblock)
                 if nblocks == 1:
                     self._models = models
             else:
-                print("\nLoading precomputed models")
+                console.print(f"{INFO} Loading precomputed models.")
                 models = self._models
 
-            print("\nEstimating the physical properties ...")
+            console.print(f"{INFO} Estimating the physical properties.")
             result = self._compute_bayes(conf, obs, models)
             results.append(result)
-            print("\nBlock processed.")
+            console.print(f"{INFO} Block processed.")
 
-        print("\nEstimating physical properties on all blocks")
+        console.rule("Global analysis")
+        console.print(f"{INFO} Estimating the physical properties.")
         results = ResultsManager.merge(results)
 
-        print("\nComputing the best fit spectra")
+        console.print(f"{INFO} Computing the best fit spectra.")
         self._compute_best(conf, obs, params, results)
 
         return results
@@ -176,9 +215,9 @@ class PdfAnalysis(AnalysisModule):
             Contents of pcigale.ini in the form of a dictionary
 
         """
-        np.seterr(invalid='ignore')
+        np.seterr(invalid="ignore")
 
-        print("Initialising the analysis module... ")
+        console.print(f"{INFO} Initialising the analysis module.")
 
         # Rename the output directory if it exists
         self.prepare_dirs()
@@ -191,32 +230,32 @@ class PdfAnalysis(AnalysisModule):
         # all the required fluxes are present, adding errors if needed,
         # discarding invalid fluxes, etc.
         obs = ObservationsManager(conf, params)
-        obs.save('observations')
+        obs.save("observations")
 
         results = self._compute(conf, obs, params)
-        print("\nSanity check of the analysis results...")
+        console.print(f"{INFO} Sanity check of the analysis results.")
         results.best.analyse_chi2()
 
-        print("\nSaving the analysis results...")
+        console.print(f"{INFO} Saving the analysis results.")
         results.save("results")
 
-        if conf['analysis_params']['mock_flag'] is True:
-            print("\nAnalysing the mock observations...")
+        if conf["analysis_params"]["mock_flag"] is True:
+            console.print(f"{INFO} Analysing the mock observations.")
 
             # For the mock analysis we do not save the ancillary files.
-            for k in ['best_sed', 'chi2']:
-                conf['analysis_params'][f"save_{k}"] = False
+            for k in ["best_sed", "chi2"]:
+                conf["analysis_params"][f"save_{k}"] = False
 
             # We replace the observations with a mock catalogue..
             obs.generate_mock(results)
-            obs.save('mock_observations')
+            obs.save("mock_observations")
 
             results = self._compute(conf, obs, params)
 
-            print("\nSaving the mock analysis results...")
+            console.print(f"{INFO} Saving the mock analysis results.")
             results.save("results_mock")
 
-        print("Run completed!")
+        console.print(f"{INFO} Run completed! :thumbs_up:")
 
 
 # AnalysisModule to be returned by get_module

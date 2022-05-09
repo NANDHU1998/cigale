@@ -12,6 +12,8 @@ import scipy.constants as cst
 
 from . import SedModule
 
+__category__ = "radio"
+
 
 class Radio(SedModule):
     """Radio emission
@@ -38,7 +40,7 @@ class Radio(SedModule):
             "The radio-loudness parameter for AGN, defined as "
             "R=Lν_5GHz/Lν_2500A, where Lν_2500A is the AGN 2500 Å intrinsic "
             "disk luminosity measured at viewing angle=30°.",
-            0.
+            10
         ),
         "alpha_agn": (
             "cigale_list()",
@@ -61,7 +63,7 @@ class Radio(SedModule):
         # m s¯¹.
         c = cst.c * 1e9
         # We define the wavelength range for the non thermal emission
-        self.wave = np.logspace(5., 9., 1000)
+        self.wave = np.logspace(5., 11., 1000)
 
         # We compute the SF synchrotron emission normalised at 21cm
         self.lumin_nonthermal_sf = (1. / self.wave)**(-self.alpha_sf + 2.) / \
@@ -80,6 +82,8 @@ class Radio(SedModule):
         # AGN 2500 A Lnu
         S5GHz = self.R_agn * 5e9**2. / c
         self.lumin_agn *= S5GHz
+        # The 1.4 GHz AGN power
+        self.agn_P14 = np.interp(2.14e8, self.wave, self.lumin_agn) * 0.153
 
     def process(self, sed):
         """Add the radio contribution.
@@ -94,7 +98,7 @@ class Radio(SedModule):
         luminosity = sed.info['dust.luminosity']
 
         if 'agn.intrin_Lnu_2500A_30deg' not in sed.info:
-            sed.add_info('agn.intrin_Lnu_2500A_30deg', 1., True, unit='W/Hz')
+            sed.add_info('agn.intrin_Lnu_2500A_30deg', 0., True, unit='W/Hz')
         Lnu_2500A = sed.info['agn.intrin_Lnu_2500A_30deg']
 
         sed.add_module(self.name, self.parameters)
@@ -106,6 +110,8 @@ class Radio(SedModule):
         sed.add_info("radio.alpha_agn", self.alpha_agn)
         sed.add_contribution('radio.agn', self.wave,
                              self.lumin_agn * Lnu_2500A)
+        sed.add_info("radio.P_agn_1p4GHz", self.agn_P14 * Lnu_2500A, True,
+                     unit='W/Hz')
 
 
 # SedModule to be returned by get_module

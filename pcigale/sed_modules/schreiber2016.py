@@ -10,6 +10,8 @@ import numpy as np
 from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
+__category__ = "dust emission"
+
 
 class Schreiber2016(SedModule):
     """Schreiber et al. (2016) templates IR re-emission module

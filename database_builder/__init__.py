@@ -603,29 +603,27 @@ def build_fritz2006():
         for n in range(len(psy)):
             block = data[nskip + blocksize * n + 4 * (n + 1) - 1:
                          nskip + blocksize * (n+1) + 4 * (n + 1) - 1]
-            lumin_therm, lumin_scatt, lumin_agn = np.genfromtxt(
+            dust, scatt, disk = np.genfromtxt(
                 io.BytesIO("".join(block).encode()), usecols=(2, 3, 4),
                 unpack=True)
             # Remove NaN
-            lumin_therm = np.nan_to_num(lumin_therm)
-            lumin_scatt = np.nan_to_num(lumin_scatt)
-            lumin_agn = np.nan_to_num(lumin_agn)
+            dust = np.nan_to_num(dust)
+            scatt = np.nan_to_num(scatt)
+            disk = np.nan_to_num(disk)
+            # Merge scatter into disk
+            disk += scatt
             # Conversion from erg/s/microns to W/nm
-            lumin_therm *= 1e-4
-            lumin_scatt *= 1e-4
-            lumin_agn *= 1e-4
+            dust *= 1e-4
+            disk *= 1e-4
             # Normalization of the lumin_therm to 1W
-            norm = np.trapz(lumin_therm, x=wave)
-            lumin_therm /= norm
-            lumin_scatt /= norm
-            lumin_agn /= norm
-
+            norm = np.trapz(dust, x=wave)
+            dust /= norm
+            disk /= norm
 
             db.add({"r_ratio": float(params[4]), "tau": float(params[3]),
                     "beta": float(params[2]), "gamma": float(params[1]),
                     "opening_angle": float(params[0]), "psy": float(psy[n])},
-                   {"wl": wave, "spec_therm": lumin_therm,
-                    "spec_scatt": lumin_scatt, "spec_agn": lumin_agn})
+                   {"norm": norm, "wl": wave, "disk": disk, "dust": dust})
     db.close()
 
 def build_skirtor2016():
@@ -664,6 +662,31 @@ def build_skirtor2016():
         disk /= wl
         dust /= wl
 
+        # Extrapolate the model to 10 mm
+        wl_ext = np.array([2e6, 4e6, 8e6, 1e7])
+        disk_ext = np.zeros(len(wl_ext)) + 1e-99
+        if dust[-1]==0:
+            dust_ext = np.zeros(len(wl_ext)) + 1e-99
+        else:
+            dust_ext = 10** ( np.log10(dust[-1]) + np.log10(wl_ext/wl[-1]) * \
+                    np.log10(dust[-2]/dust[-1]) / np.log10(wl[-2]/wl[-1]) )
+        wl = np.append(wl, wl_ext)
+        disk[-1] = 1e-99
+        disk = np.append(disk, disk_ext)
+        dust = np.append(dust, dust_ext)
+
+        # Interpolate to a denser grid
+        with SimpleDatabase("nebular_continuum") as db1:
+             nebular = db1.get(Z=0.019, logU=-2.0, ne=100.0)
+        wl_den = nebular.wl[np.where((nebular.wl >= 3e4)  & (nebular.wl <= 1e7))]
+        idx = np.where(wl>1e4)
+        disk_den = 10** np.interp( np.log10(wl_den), np.log10(wl[idx]), np.log10(disk[idx]) )
+        dust_den = 10** np.interp( np.log10(wl_den), np.log10(wl[idx]), np.log10(dust[idx]) )
+        idx = np.where(wl<3e4)
+        wl = np.append(wl[idx], wl_den)
+        disk = np.append(disk[idx], disk_den)
+        dust = np.append(dust[idx], dust_den)
+
         # Normalization of the lumin_therm to 1W
         norm = np.trapz(dust, x=wl)
         disk /= norm
@@ -687,50 +710,71 @@ def build_nebular():
     wave_lines = tmp['col1'].data
     name_lines = tmp['col2'].data
 
+    # Build the parameters
+    metallicities = np.unique(lines[:, 1])
+    logUs = np.around(np.arange(-4., -.9, .1), 1)
+    nes = np.array([10., 100., 1000.])
+
     filename = path / "continuum.dat"
     print(f"Importing {filename}...")
     cont = np.genfromtxt(filename)
 
     # Convert wavelength from Å to nm
     wave_lines *= 0.1
-    wave_cont = cont[:3729, 0] * 0.1
+    wave_cont = cont[:1600, 0] * 0.1
 
-    # Get the list of metallicities
-    metallicities = np.unique(lines[:, 1])
+    # Compute the wavelength grid to resample the models so as to eliminate
+    # non-physical waves and compute the models faster by avoiding resampling
+    # them at run time.
+    with SimpleDatabase("bc03") as db:
+        wave_stellar = db.get(imf="salp", Z=0.02).wl
+    with SimpleDatabase("dl2014") as db:
+        wave_dust = db.get(qpah=0.47, umin=1., umax=1., alpha=1.).wl
+    wave_cont_interp = np.unique(np.hstack([wave_cont, wave_stellar, wave_dust,
+                                            np.logspace(7., 9., 501)]))
 
     # Keep only the fluxes
     lines = lines[:, 2:]
     cont = cont[:, 1:]
 
-    # We select only models with ne=100. Other values could be included later
-    lines = lines[:, 1::3]
-    cont = cont[:, 1::3]
+    # Reshape the arrays so they are easier to handle
+    cont = np.reshape(cont, (metallicities.size, wave_cont.size, logUs.size,
+                             nes.size))
+    lines = np.reshape(lines, (wave_lines.size, metallicities.size, logUs.size,
+                               nes.size))
+
+    # Move the wavelength to the last position to ease later computations
+    # 0: metallicity, 1: log U, 2: ne, 3: wavelength
+    cont = np.moveaxis(cont, 1, -1)
+    lines = np.moveaxis(lines, (0, 1, 2, 3), (3, 0, 1, 2))
 
     # Convert lines to W and to a linear scale
     lines = 10**(lines-7)
 
     # Convert continuum to W/nm
-    cont *= np.tile(1e-7 * cst.c * 1e9 / wave_cont**2,
-                    metallicities.size)[:, np.newaxis]
+    cont *= 1e-7 * cst.c * 1e9 / wave_cont**2
 
     # Import lines
     db = SimpleDatabase("nebular_lines", writable=True)
-    for idx, metallicity in enumerate(metallicities):
-        spectra = lines[idx::6, :]
-        for logU, spectrum in zip(np.around(np.arange(-4., -.9, .1), 1),
-                                  spectra.T):
-            db.add({"Z": float(metallicity), "logU": float(logU)},
-                   {"name": name_lines, "wl": wave_lines, "spec": spectrum})
+    for idxZ, metallicity in enumerate(metallicities):
+        for idxU, logU in enumerate(logUs):
+            for ne, spectrum in zip(nes, lines[idxZ, idxU, :, :]):
+                db.add({"Z": float(metallicity), "logU": float(logU),
+                        "ne": float(ne)},
+                       {"name": name_lines, "wl": wave_lines, "spec": spectrum})
     db.close()
 
     # Import continuum
     db = SimpleDatabase("nebular_continuum", writable=True)
-    for idx, metallicity in enumerate(metallicities):
-        spectra = cont[3729 * idx: 3729 * (idx+1), :]
-        for logU, spectrum in zip(np.around(np.arange(-4., -.9, .1), 1),
-                                  spectra.T):
-            db.add({"Z": float(metallicity), "logU": float(logU)},
-                   {"wl": wave_cont, "spec": spectrum})
+    spectra = 10 ** interpolate.interp1d(np.log10(wave_cont), np.log10(cont),
+                                         axis=-1)(np.log10(wave_cont_interp))
+    spectra = np.nan_to_num(spectra)
+    for idxZ, metallicity in enumerate(metallicities):
+        for idxU, logU in enumerate(logUs):
+            for ne, spectrum in zip(nes, spectra[idxZ, idxU, :, :]):
+                db.add({"Z": float(metallicity), "logU": float(logU),
+                        "ne": float(ne)},
+                       {"wl": wave_cont_interp, "spec": spectrum})
     db.close()
 
 
@@ -924,33 +968,33 @@ def build_base(bc03res='lr'):
     print("\nDONE\n")
     print('#' * 78)
 
-    print("4- Importing nebular lines and continuum\n")
-    build_nebular()
-    print("\nDONE\n")
-    print('#' * 78)
-
-    print("5- Importing Draine and Li (2007) models\n")
+    print("4- Importing Draine and Li (2007) models\n")
     build_dl2007()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("6- Importing the updated Draine and Li (2007) models\n")
+    print("5- Importing the updated Draine and Li (2007) models\n")
     build_dl2014()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("7- Importing Jones et al (2017) models)\n")
+    print("6- Importing Jones et al (2017) models)\n")
     build_themis()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("8- Importing Dale et al (2014) templates\n")
+    print("7- Importing Dale et al (2014) templates\n")
     build_dale2014()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("9- Importing Schreiber et al (2016) models\n")
+    print("8- Importing Schreiber et al (2016) models\n")
     build_schreiber2016()
+    print("\nDONE\n")
+    print('#' * 78)
+
+    print("9- Importing nebular lines and continuum\n")
+    build_nebular()
     print("\nDONE\n")
     print('#' * 78)
 
@@ -968,6 +1012,7 @@ def build_base(bc03res='lr'):
     build_nebular_AGN()
     print("\nDONE\n")
     print('#' * 78)
+
 
 
 if __name__ == '__main__':

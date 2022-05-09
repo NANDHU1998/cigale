@@ -13,10 +13,10 @@ import multiprocessing as mp
 from pathlib import Path
 
 from pcigale.session.configuration import Configuration
-from .plot_types.chi2 import chi2 as chi2_action
-from .plot_types.pdf import pdf as pdf_action
-from .plot_types.sed import sed as sed_action, AVAILABLE_SERIES
-from .plot_types.mock import mock as mock_action
+from pcigale_plots.plot_types.chi2 import Chi2 as chi2_action
+from pcigale_plots.plot_types.pdf import PDF as pdf_action
+from pcigale_plots.plot_types.sed import SED as sed_action, AVAILABLE_SERIES
+from pcigale_plots.plot_types.mock import Mock as mock_action
 
 __version__ = "0.2-alpha"
 
@@ -39,12 +39,19 @@ def parser_range(range_str):
 
 
 def main():
+    if sys.version_info[:2] < (3, 8):
+        raise Exception(f"Python {sys.version_info[0]}.{sys.version_info[1]} is"
+                        f" unsupported. Please upgrade to Python 3.8 or later.")
 
-    if sys.version_info[:2] >= (3, 4):
-        mp.set_start_method('spawn')
+    # We set the sub processes start method to spawn because it solves
+    # deadlocks when a library cannot handle being used on two sides of a
+    # forked process. This happens on modern Macs with the Accelerate library
+    # for instance. On Linux we should be pretty safe with a fork, which allows
+    # to start processes much more rapidly.
+    if sys.platform.startswith('linux'):
+        mp.set_start_method('fork')
     else:
-        print("Could not set the multiprocessing start method to spawn. If "
-              "you encounter a deadlock, please upgrade to Python≥3.4.")
+        mp.set_start_method('spawn')
 
     parser = argparse.ArgumentParser()
 

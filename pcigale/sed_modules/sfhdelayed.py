@@ -13,6 +13,8 @@ import numpy as np
 
 from . import SedModule
 
+__category__ = "SFH"
+
 
 class SFHDelayed(SedModule):
     """Delayed tau model for Star Formation History with an optionally

@@ -12,6 +12,8 @@ import numpy as np
 from . import SedModule
 from ..data import SimpleDatabase as Database
 
+__category__ = "SSP"
+
 
 class BC03(SedModule):
     """Bruzual and Charlot (2003) stellar emission module

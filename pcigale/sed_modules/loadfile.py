@@ -6,7 +6,7 @@ This module reads a SED spectrum from a file.
 
 """
 
-from utils.io import read_table
+from pcigale.utils.io import read_table
 from . import SedModule
 
 

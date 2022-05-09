@@ -94,10 +94,11 @@ class SedWarehouse:
 
         sed = self.sed_cache[key]
         if sed is None:
-            mod = self.get_module_cached(module_list.pop(),
-                                         **parameter_list.pop())
+            mod = self.get_module_cached(
+                module_list.pop(), **parameter_list.pop()
+            )
 
-            if (len(module_list) == 0):
+            if len(module_list) == 0:
                 sed = SED()
             else:
                 sed = self.get_sed(module_list, parameter_list).copy()

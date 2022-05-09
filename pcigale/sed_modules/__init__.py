@@ -163,5 +163,4 @@ def get_module(name, **kwargs):
         module = import_module("." + name, 'pcigale.sed_modules')
         return module.Module(name=name, **kwargs)
     except ImportError:
-        print('Module ' + name + ' does not exist!')
-        raise
+        raise Exception(f"Module {name} could not be imported.")

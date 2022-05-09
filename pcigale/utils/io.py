@@ -6,6 +6,7 @@ from functools import lru_cache
 from astropy.table import Table
 from astropy.io.ascii.core import InconsistentTableError
 
+
 @lru_cache
 def read_table(file_):
     """Read a data table using astropy
@@ -33,14 +34,16 @@ def read_table(file_):
         table = Table.read(file_)
     except Exception:  # astropy should raise a specific exception
         try:
-            table = Table.read(file_, format="ascii", delimiter='\s')
+            table = Table.read(file_, format="ascii", delimiter=r"\s")
         except InconsistentTableError:
-            raise Exception(f"The file {file_} can not be parsed as a data "
-                            "table.")
+            raise Exception(
+                f"The file {file_} can not be parsed as a data table."
+            )
 
     # Convert all the integers to floats.
-    return Table([
-        col.astype(float) if col.name != 'id' and col.dtype == int
-        else col
-        for col in table.columns.values()
-    ])
+    return Table(
+        [
+            col.astype(float) if col.name != "id" and col.dtype == int else col
+            for col in table.columns.values()
+        ]
+    )

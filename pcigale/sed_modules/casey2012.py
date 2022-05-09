@@ -11,6 +11,8 @@ import scipy.constants as cst
 
 from . import SedModule
 
+__category__ = "dust emission"
+
 
 class Casey2012(SedModule):
     """Casey (2012) templates IR re-emission

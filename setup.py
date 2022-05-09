@@ -31,12 +31,16 @@ entry_points = {
                         'pcigale-filters = pcigale_filters:main']
 }
 
+with open('pcigale/version.py') as f:
+    exec(f.read())
+
 setup(
     name="pcigale",
-    version="dev",
+    version=__version__,
     packages=find_packages(exclude=["database_builder"]),
 
-    install_requires=['numpy', 'scipy', 'matplotlib', 'configobj', 'astropy'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'configobj', 'astropy',
+                      'rich'],
     setup_requires=['numpy', 'scipy', 'astropy', 'configobj'],
     entry_points=entry_points,
 

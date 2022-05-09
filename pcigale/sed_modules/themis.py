@@ -14,6 +14,8 @@ import numpy as np
 from pcigale.data import SimpleDatabase as Database
 from . import SedModule
 
+__category__ = "dust emission"
+
 
 class THEMIS(SedModule):
     """Jones et al (2017) templates IR re-emission module
