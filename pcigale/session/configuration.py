@@ -82,7 +82,10 @@ class Configuration:
             "of the distance computed from the redshift), the filter names for "
             "the fluxes, and the filter names with the '_err' suffix for the "
             "uncertainties. The fluxes and the uncertainties must be in mJy "
-            "for broadband data and in W/m² for emission lines. This file is "
+            "for broadband data and in W/m² for emission lines. Fluxes can be "
+            "positive or negative. Upper limits are indicated with a negative "
+            "value for the uncertainty. In case some fluxes are missing for "
+            "some entries, they can be replaced with NaN. This file is "
             "optional to generate the configuration file, in particular for "
             "the savefluxes module.")
         self.spec['data_file'] = "string()"
