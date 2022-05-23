@@ -748,8 +748,8 @@ def build_nebular():
     cont = np.moveaxis(cont, 1, -1)
     lines = np.moveaxis(lines, (0, 1, 2, 3), (3, 0, 1, 2))
 
-    # Convert lines to W and to a linear scale
-    lines = 10**(lines-7)
+    # Convert lines to a linear scale
+    lines = 10.0 ** lines
 
     # Convert continuum to W/nm
     cont *= 1e-7 * cst.c * 1e9 / wave_cont**2

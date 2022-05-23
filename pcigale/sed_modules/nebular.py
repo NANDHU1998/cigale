@@ -7,21 +7,9 @@ from . import SedModule
 __category__ = "nebular"
 
 default_lines = ['Ly-alpha',
-                 'CII-133.5',
-                 'SiIV-139.7',
-                 'CIV-154.9',
                  'HeII-164.0',
-                 'OIII-166.5',
-                 'CIII-190.9',
-                 'CII-232.6',
-                 'MgII-279.8',
-                 'OII-372.7',
-                 'H-10',
-                 'H-9',
-                 'NeIII-386.9',
-                 'HeI-388.9',
-                 'H-epsilon',
-                 'SII-407.0',
+                 'OII-372.6',
+                 'OII-372.9',
                  'H-delta',
                  'H-gamma',
                  'H-beta',
@@ -30,7 +18,7 @@ default_lines = ['Ly-alpha',
                  'OI-630.0',
                  'NII-654.8',
                  'H-alpha',
-                 'NII-658.4',
+                 'NII-658.3',
                  'SII-671.6',
                  'SII-673.1'
                  ]
@@ -63,10 +51,10 @@ class NebularEmission(SedModule):
         'zgas': (
             'cigale_list(options=0.0001 & 0.0004 & 0.001 & 0.002 & 0.0025 & '
             '0.003 & 0.004 & 0.005 & 0.006 & 0.007 & 0.008 & 0.009 & 0.011 & '
-            '0.012 & 0.014 & 0.016 & 0.019 & 0.022 & 0.025 & 0.03 & 0.033 & '
-            '0.037 & 0.041 & 0.046 & 0.051)',
+            '0.012 & 0.014 & 0.016 & 0.019 & 0.020 & 0.022 & 0.025 & 0.03 & '
+            '0.033 & 0.037 & 0.041 & 0.046 & 0.051)',
             "Gas metallicity",
-            0.014
+            0.02
         ),
         'ne': (
             'cigale_list(options=10 & 100 & 1000)',
