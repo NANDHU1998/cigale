@@ -99,3 +99,4 @@ list_density_BLR.dat filter=lfs diff=lfs merge=lfs -text
 list_density_NLR.dat filter=lfs diff=lfs merge=lfs -text
 list_logU.dat filter=lfs diff=lfs merge=lfs -text
 list_zetas.dat filter=lfs diff=lfs merge=lfs -text
+line_wavelengths_AGN.dat filter=lfs diff=lfs merge=lfs -text
