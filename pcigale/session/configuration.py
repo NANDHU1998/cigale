@@ -137,7 +137,7 @@ class Configuration:
             ["* skirtor2016 (AGN models from Stalevski et al. 2012, 2016)"] +
             ["* fritz2006 (AGN models from Fritz et al. 2006)"] +
             [" AGN nebular emission:"] +
-            ["* AGN nebular (continuum and line nebular emission)"] +
+            ["* nebular_AGN (continuum and line nebular emission)"] +
             ["X-ray:"] +
             ["* xray (from AGN and galaxies; skirtor2016/fritz2006 is needed for AGN)"] +
             ["Radio:"] +
