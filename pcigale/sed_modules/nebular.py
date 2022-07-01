@@ -6,22 +6,37 @@ from . import SedModule
 
 __category__ = "nebular"
 
-default_lines = ['Ly-alpha',
-                 'HeII-164.0',
-                 'OII-372.6',
-                 'OII-372.9',
-                 'H-delta',
-                 'H-gamma',
-                 'H-beta',
-                 'OIII-495.9',
-                 'OIII-500.7',
-                 'OI-630.0',
-                 'NII-654.8',
-                 'H-alpha',
-                 'NII-658.3',
-                 'SII-671.6',
-                 'SII-673.1'
-                 ]
+default_lines = [
+        "ArIII-713.6",
+        "CII-232.4",
+        "CII-232.47",
+        "CII-232.54",
+        "CII-232.7",
+        "CII-232.8",
+        "CIII-190.7",
+        "CIII-190.9",
+        "H-alpha",
+        "H-beta",
+        "H-delta",
+        "H-gamma",
+        "HeII-164.0",
+        "Ly-alpha",
+        "NII-654.8",
+        "NII-658.3",
+        "NeIII-396.7",
+        "OI-630.0",
+        "OII-372.6",
+        "OII-372.9",
+        "OIII-495.9",
+        "OIII-500.7",
+        "Pa-alpha",
+        "Pa-beta",
+        "Pa-gamma",
+        "SII-671.6",
+        "SII-673.1",
+        "SIII-906.9",
+        "SIII-953.1",
+]
 
 
 class NebularEmission(SedModule):
@@ -40,44 +55,52 @@ class NebularEmission(SedModule):
     """
 
     parameter_list = {
-        'logU': (
-            'cigale_list(options=-4.0 & -3.9 & -3.8 & -3.7 & -3.6 & -3.5 & '
-            '-3.4 & -3.3 & -3.2 & -3.1 & -3.0 & -2.9 & -2.8 & -2.7 & -2.6 & '
-            '-2.5 & -2.4 & -2.3 & -2.2 & -2.1 & -2.0 & -1.9 & -1.8 & -1.7 & '
-            '-1.6 & -1.5 & -1.4 & -1.3 & -1.2 & -1.1 & -1.0)',
-            "Ionisation parameter",
+        "logU": (
+            "cigale_list(options=-4.0 & -3.9 & -3.8 & -3.7 & -3.6 & -3.5 & "
+            "-3.4 & -3.3 & -3.2 & -3.1 & -3.0 & -2.9 & -2.8 & -2.7 & -2.6 & "
+            "-2.5 & -2.4 & -2.3 & -2.2 & -2.1 & -2.0 & -1.9 & -1.8 & -1.7 & "
+            "-1.6 & -1.5 & -1.4 & -1.3 & -1.2 & -1.1 & -1.0)",
+            "Ionisation parameter. Possible values are: -4.0, -3.9, -3.8, "
+            "-3.7, -3.6, -3.5, -3.4, -3.3, -3.2, -3.1, -3.0, -2.9, -2.8, "
+            "-2.7, -2.6, -2.5, -2.4, -2.3, -2.2, -2.1, -2.0, -1.9, -1.8, "
+            "-1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1, -1.0.",
             -2.
         ),
-        'zgas': (
-            'cigale_list(options=0.0001 & 0.0004 & 0.001 & 0.002 & 0.0025 & '
-            '0.003 & 0.004 & 0.005 & 0.006 & 0.007 & 0.008 & 0.009 & 0.011 & '
-            '0.012 & 0.014 & 0.016 & 0.019 & 0.020 & 0.022 & 0.025 & 0.03 & '
-            '0.033 & 0.037 & 0.041 & 0.046 & 0.051)',
-            "Gas metallicity",
+        "zgas": (
+            "cigale_list(options=0.0001 & 0.0004 & 0.001 & 0.002 & 0.0025 & "
+            "0.003 & 0.004 & 0.005 & 0.006 & 0.007 & 0.008 & 0.009 & 0.011 & "
+            "0.012 & 0.014 & 0.016 & 0.019 & 0.020 & 0.022 & 0.025 & 0.03 & "
+            "0.033 & 0.037 & 0.041 & 0.046 & 0.051)",
+            "Gas metallicity. Possible values are: 0.000, 0.0004, 0.001, "
+            "0.002, 0.0025, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009,"
+            " 0.011, 0.012, 0.014, 0.016, 0.019, 0.020, 0.022, 0.025, 0.03, "
+            "0.033, 0.037, 0.041, 0.046, 0.051.",
             0.02
         ),
-        'ne': (
-            'cigale_list(options=10 & 100 & 1000)',
-            "Electron density",
+        "ne": (
+            "cigale_list(options=10 & 100 & 1000)",
+            "Electron density. Possible values are: 10, 100, 1000.",
             100
         ),
-        'f_esc': (
-            'cigale_list(minvalue=0., maxvalue=1.)',
-            "Fraction of Lyman continuum photons escaping the galaxy",
+        "f_esc": (
+            "cigale_list(minvalue=0., maxvalue=1.)",
+            "Fraction of Lyman continuum photons escaping the galaxy. "
+            "Possible values between 0 and 1.",
             0.
         ),
-        'f_dust': (
-            'cigale_list(minvalue=0., maxvalue=1.)',
-            "Fraction of Lyman continuum photons absorbed by dust",
+        "f_dust": (
+            "cigale_list(minvalue=0., maxvalue=1.)",
+            "Fraction of Lyman continuum photons absorbed by dust. Possible "
+            "values between 0 and 1.",
             0.
         ),
-        'lines_width': (
-            'cigale_list(minvalue=0.)',
-            "Line width in km/s",
+        "lines_width": (
+            "cigale_list(minvalue=0.)",
+            "Line width in km/s.",
             300.
         ),
-        'emission': (
-            'boolean()',
+        "emission": (
+            "boolean()",
             "Include nebular emission.",
             True
         )
@@ -87,14 +110,14 @@ class NebularEmission(SedModule):
         """Get the nebular emission lines out of the database and resample
            them to see the line profile. Compute scaling coefficients.
         """
-        self.logU = float(self.parameters['logU'])
-        self.zgas = float(self.parameters['zgas'])
-        self.ne = float(self.parameters['ne'])
-        self.fesc = float(self.parameters['f_esc'])
-        self.fdust = float(self.parameters['f_dust'])
-        self.lines_width = float(self.parameters['lines_width'])
-        if type(self.parameters["emission"]) is str:
-            self.emission = self.parameters["emission"].lower() == 'true'
+        self.logU = float(self.parameters["logU"])
+        self.zgas = float(self.parameters["zgas"])
+        self.ne = float(self.parameters["ne"])
+        self.fesc = float(self.parameters["f_esc"])
+        self.fdust = float(self.parameters["f_dust"])
+        self.lines_width = float(self.parameters["lines_width"])
+        if isinstance(self.parameters["emission"], str):
+            self.emission = self.parameters["emission"].lower() == "true"
         else:
             self.emission = bool(self.parameters["emission"])
 
@@ -110,7 +133,7 @@ class NebularEmission(SedModule):
 
         if self.emission:
             with Database("nebular_continuum") as db:
-                metallicities = db.parameters['Z']
+                metallicities = db.parameters["Z"]
                 self.cont_template = {m: db.get(Z=m, logU=self.logU, ne=self.ne)
                                       for m in metallicities}
 
@@ -170,36 +193,36 @@ class NebularEmission(SedModule):
             self.absorbed_young = np.zeros(sed.wavelength_grid.size)
 
         self.absorbed_old[:self.idx_Ly_break] = -(
-            sed.luminosities['stellar.old'][:self.idx_Ly_break] *
+            sed.luminosities["stellar.old"][:self.idx_Ly_break] *
             (1. - self.fesc))
         self.absorbed_young[:self.idx_Ly_break] = -(
-            sed.luminosities['stellar.young'][:self.idx_Ly_break] *
+            sed.luminosities["stellar.young"][:self.idx_Ly_break] *
             (1. - self.fesc))
 
         sed.add_module(self.name, self.parameters)
-        sed.add_info('nebular.f_esc', self.fesc)
-        sed.add_info('nebular.f_dust', self.fdust)
-        sed.add_info('dust.luminosity', (sed.info['stellar.lum_ly_young'] +
-                     sed.info['stellar.lum_ly_old']) * self.fdust, True,
-                     unit='W')
+        sed.add_info("nebular.f_esc", self.fesc)
+        sed.add_info("nebular.f_dust", self.fdust)
+        sed.add_info("dust.luminosity", (sed.info["stellar.lum_ly_young"] +
+                     sed.info["stellar.lum_ly_old"]) * self.fdust, True,
+                     unit="W")
 
-        sed.add_contribution('nebular.absorption_old', sed.wavelength_grid,
+        sed.add_contribution("nebular.absorption_old", sed.wavelength_grid,
                              self.absorbed_old)
-        sed.add_contribution('nebular.absorption_young', sed.wavelength_grid,
+        sed.add_contribution("nebular.absorption_young", sed.wavelength_grid,
                              self.absorbed_young)
 
         if self.emission:
-            NLy_old = sed.info['stellar.n_ly_old']
-            NLy_young = sed.info['stellar.n_ly_young']
+            NLy_old = sed.info["stellar.n_ly_old"]
+            NLy_young = sed.info["stellar.n_ly_young"]
             metallicity = self.zgas
             lines = self.lines_template[metallicity]
             linesdict = self.linesdict[metallicity]
             cont = self.cont_template[metallicity]
 
-            sed.add_info('nebular.lines_width', self.lines_width, unit='km/s')
-            sed.add_info('nebular.logU', self.logU)
-            sed.add_info('nebular.zgas', self.zgas)
-            sed.add_info('nebular.ne', self.ne, unit='cm^-3')
+            sed.add_info("nebular.lines_width", self.lines_width, unit="km/s")
+            sed.add_info("nebular.logU", self.logU)
+            sed.add_info("nebular.zgas", self.zgas)
+            sed.add_info("nebular.ne", self.ne, unit="cm^-3")
 
             for line in default_lines:
                 wave, ratio = linesdict[line]
@@ -207,14 +230,14 @@ class NebularEmission(SedModule):
                                    ratio * NLy_old * self.corr,
                                    ratio * NLy_young * self.corr)
 
-            sed.add_contribution('nebular.lines_old', lines.wl,
+            sed.add_contribution("nebular.lines_old", lines.wl,
                                  lines.spec * NLy_old * self.corr)
-            sed.add_contribution('nebular.lines_young', lines.wl,
+            sed.add_contribution("nebular.lines_young", lines.wl,
                                  lines.spec * NLy_young * self.corr)
 
-            sed.add_contribution('nebular.continuum_old', cont.wl,
+            sed.add_contribution("nebular.continuum_old", cont.wl,
                                  cont.spec * NLy_old * self.corr)
-            sed.add_contribution('nebular.continuum_young', cont.wl,
+            sed.add_contribution("nebular.continuum_young", cont.wl,
                                  cont.spec * NLy_young * self.corr)
 
 

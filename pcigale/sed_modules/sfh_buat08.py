@@ -57,7 +57,7 @@ class SfhBuat08(SedModule):
     def _init_code(self):
         self.velocity = float(self.parameters["velocity"])
         self.age = int(self.parameters["age"])
-        if type(self.parameters["normalise"]) is str:
+        if isinstance(self.parameters["normalise"], str):
             normalise = self.parameters["normalise"].lower() == 'true'
         else:
             normalise = bool(self.parameters["normalise"])

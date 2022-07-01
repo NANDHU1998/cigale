@@ -265,6 +265,9 @@ def Pei92(wave, Rv=None, law='mw'):
         b_coeff = np.array([90, 4.0, -1.95, -1.95, -1.8, 0.0])
         n_coeff = np.array([2.0, 6.5, 2.0, 2.0, 2.0, 2.0])
 
+    else:
+        raise ValueError(f"Pei92 law {law} unknown.")
+
     Alambda_over_Ab = np.zeros(len(wvl))
     for a, wv, b, n in zip(a_coeff, wvl_coeff, b_coeff, n_coeff):
         Alambda_over_Ab += a / ((wvl / wv)**n + (wv / wvl)**n + b)

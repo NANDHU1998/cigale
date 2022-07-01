@@ -69,7 +69,7 @@ class SFHDelayedBQ(SedModule):
         self.age_bq = int(self.parameters["age_bq"])
         self.r_sfr = float(self.parameters["r_sfr"])
         sfr_A = float(self.parameters["sfr_A"])
-        if type(self.parameters["normalise"]) is str:
+        if isinstance(self.parameters["normalise"], str):
             normalise = self.parameters["normalise"].lower() == 'true'
         else:
             normalise = bool(self.parameters["normalise"])

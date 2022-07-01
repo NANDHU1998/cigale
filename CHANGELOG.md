@@ -6,6 +6,7 @@
 - Additional detail has been added to the description of the `data\_file` entry in the `pcigale.ini` file to describe how to indicate upper limits as well as regarding the use NaN for missing values. (Médéric Boquien)
 ### Changed
 - New CLOUDY nebular models have been computed with an extended range in metallicities. (Patrice Theulé, Véronique Buat, and Médéric Boquien)
+- The `m2005` module has been made compatible with the `nebular` module. (Médéric Boquien)
 ### Fixed
 - The list of emission lines contained a handful of incorrect entries. It has been entirely reworked in conjunction of the computation of new nebular models. (Patrice Theulé, Véronique Buat, and Médéric Boquien)
 ### Optimised

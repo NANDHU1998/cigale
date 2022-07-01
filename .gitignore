@@ -8,3 +8,6 @@ docs/_build
 docs/api
 dist/
 build/
+*.diff
+*.patch
+.vscode

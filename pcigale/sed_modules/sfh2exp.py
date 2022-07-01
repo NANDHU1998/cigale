@@ -68,7 +68,7 @@ class Sfh2Exp(SedModule):
         self.burst_age = int(self.parameters["burst_age"])
         age = int(self.parameters["age"])
         sfr_0 = float(self.parameters["sfr_0"])
-        if type(self.parameters["normalise"]) is str:
+        if isinstance(self.parameters["normalise"], str):
             normalise = self.parameters["normalise"].lower() == 'true'
         else:
             normalise = bool(self.parameters["normalise"])

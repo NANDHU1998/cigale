@@ -239,7 +239,7 @@ class PdfAnalysis(AnalysisModule):
         console.print(f"{INFO} Saving the analysis results.")
         results.save("results")
 
-        if conf["analysis_params"]["mock_flag"] is True:
+        if conf["analysis_params"]["mock_flag"]:
             console.print(f"{INFO} Analysing the mock observations.")
 
             # For the mock analysis we do not save the ancillary files.

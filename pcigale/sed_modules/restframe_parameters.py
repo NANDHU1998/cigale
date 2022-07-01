@@ -199,7 +199,7 @@ class RestframeParam(SedModule):
         # Compute the list of unique filters to compute both the luminosities
         # and the colours
         self.filters = list(set(self.lumin_filters + self.colour_filters +
-                                (["FUV"] if self.parameters["IRX"] is True
+                                (["FUV"] if self.parameters["IRX"]
                                  else [])))
 
         # Conversion factor to go from Fnu in mJy to Lnu in W

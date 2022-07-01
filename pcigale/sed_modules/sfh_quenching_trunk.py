@@ -44,7 +44,7 @@ class SfhQuenchTrunk(SedModule):
     def _init_code(self):
         self.quenching_age = int(self.parameters["quenching_age"])
         self.quenching_factor = float(self.parameters["quenching_factor"])
-        if type(self.parameters["normalise"]) is str:
+        if isinstance(self.parameters["normalise"], str):
             self.normalise = self.parameters["normalise"].lower() == 'true'
         else:
             self.normalise = bool(self.parameters["normalise"])

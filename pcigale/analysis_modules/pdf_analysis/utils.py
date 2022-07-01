@@ -238,7 +238,7 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
     # Some observations may not have flux values in some filter(s), but
     # they can have upper limit(s).
     limits = len(obs.flux_ul) > 0 or len(obs.extprop_ul) > 0
-    if limits is True and lim_flag == "full":
+    if limits and lim_flag == "full":
         _correct_scaling_ul(scaling, models, obs, wz)
 
     # χ² of the comparison of each model to each observation.
@@ -295,7 +295,7 @@ def compute_chi2(models, obs, corr_dz, wz, lim_flag):
         chi2 += (((scaling * model) * corr_dz - prop) * inv_prop_err) ** 2.0
 
     # Finally take the presence of upper limits into account
-    if limits is True and lim_flag != "none":
+    if limits and lim_flag != "none":
         for band, obs_error in obs.flux_ul_err.items():
             model = models.flux[band][wz]
             chi2 -= 2. * np.log(.5 *

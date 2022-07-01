@@ -62,7 +62,7 @@ class SimpleDatabase:
         self.writable = writable
         self.path = Path(pkg_resources.resource_filename(__name__, name))
 
-        if writable is True and self.path.is_dir() is False:
+        if writable and self.path.is_dir() is False:
             # Everything looks fine, so we create the database and save a stub
             # of the parameters dictionary.
             self.path.mkdir()
@@ -95,7 +95,7 @@ class SimpleDatabase:
         """Close the database and save the parameters dictionary if the database
         was writable.
         """
-        if self.writable is True:
+        if self.writable:
             # Eliminate duplicated parameter values and we save the dictionary.
             for k, v in self.parameters.items():
                 self.parameters[k] = list(set(v))

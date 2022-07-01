@@ -74,7 +74,7 @@ class SFHDelayed(SedModule):
         self.age_burst = int(self.parameters["age_burst"])
         self.f_burst = float(self.parameters["f_burst"])
         sfr_A = float(self.parameters["sfr_A"])
-        if type(self.parameters["normalise"]) is str:
+        if isinstance(self.parameters["normalise"], str):
             normalise = self.parameters["normalise"].lower() == 'true'
         else:
             normalise = bool(self.parameters["normalise"])

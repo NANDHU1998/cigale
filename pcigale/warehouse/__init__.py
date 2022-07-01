@@ -22,9 +22,9 @@ class SedWarehouse:
         """
         if nocache is None:
             self.nocache = []
-        elif isinstance(nocache, list) is True:
+        elif isinstance(nocache, list):
             self.nocache = nocache
-        elif isinstance(nocache, str) is True:
+        elif isinstance(nocache, str):
             self.nocache = [nocache]
         else:
             raise TypeError("The nocache argument must be a list or an str.")

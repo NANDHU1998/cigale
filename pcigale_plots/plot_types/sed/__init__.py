@@ -49,7 +49,7 @@ class SED(Plotter):
                 if not (name.endswith("_err") or name.startswith("line"))
             }
 
-        if nologo is True:
+        if nologo:
             logo = False
         else:
             logo = plt.imread(

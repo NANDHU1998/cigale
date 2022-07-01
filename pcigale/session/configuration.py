@@ -177,9 +177,9 @@ class Configuration:
 
         modules = self.config["sed_modules"]
         if "m2005" in modules:
-            if "nebular" in modules or "xray" in modules:
+            if "xray" in modules:
                 raise Exception("The m2005 module is not compatible with the "
-                                "nebular and xray modules.")
+                                "xray module.")
         # Getting the list of the filters available in pcigale database
         with Database("filters") as db:
             filter_list = db.parameters["name"]
@@ -326,7 +326,7 @@ class Configuration:
         """
 
         z_mod = self.config['sed_modules_params']['redshifting']['redshift']
-        if type(z_mod) is str and not z_mod:
+        if isinstance(z_mod, str) and not z_mod:
             if self.config['data_file']:
                 obs_table = read_table(self.config['data_file'])
                 if 'redshift_decimals' in self.config['analysis_params']:

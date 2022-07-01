@@ -41,7 +41,7 @@ setup(
 
     install_requires=['numpy', 'scipy', 'matplotlib', 'configobj', 'astropy',
                       'rich'],
-    setup_requires=['numpy', 'scipy', 'astropy', 'configobj'],
+    setup_requires=['numpy', 'scipy', 'astropy', 'configobj', 'rich'],
     entry_points=entry_points,
 
     cmdclass={"build": custom_build},

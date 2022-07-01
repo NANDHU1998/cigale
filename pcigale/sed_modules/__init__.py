@@ -1,6 +1,6 @@
-import os
-import inspect
 from importlib import import_module
+import inspect
+import os
 
 
 def complete_parameters(given_parameters, parameter_list):

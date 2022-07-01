@@ -7,6 +7,7 @@ This module implements the Maraston (2005) Single Stellar Populations.
 """
 
 import numpy as np
+import scipy.constants as cst
 
 from . import SedModule
 from ..data import SimpleDatabase as Database
@@ -114,6 +115,10 @@ class M2005(SedModule):
             else:
                 raise Exception(f"IMF #{self.imf} unknown")
 
+        self.mask_Q = slice(0, np.searchsorted(self.ssp.wl, 91.2))
+        self.wvl_H = self.ssp.wl[self.mask_Q]
+        self.invhc = 1.0 / (cst.h * cst.c)
+
     def process(self, sed):
         """Add the convolution of a Maraston 2005 SSP to the SED
 
@@ -126,6 +131,12 @@ class M2005(SedModule):
         out = self.convolve(sed.sfh)
         spec_young, spec_old, info_young, info_old, info_all = out
         lum_young, lum_old = np.trapz([spec_young, spec_old], self.ssp.wl)
+        lum_ly_young, lum_ly_old = np.trapz(
+            [spec_young[self.mask_Q], spec_old[self.mask_Q]], self.wvl_H
+        )
+        NLy_young, NLy_old = np.trapz([self.wvl_H * spec_young[self.mask_Q],
+                                       self.wvl_H * spec_old[self.mask_Q]],
+                                       x=self.wvl_H) * self.invhc * 1e-9
 
         sed.add_module(self.name, self.parameters)
 
@@ -145,6 +156,9 @@ class M2005(SedModule):
         sed.add_info('stellar.mass_black_hole_young', info_young[4], True,
                      unit='solMass')
         sed.add_info('stellar.lum_young', lum_young, True, unit='W')
+        sed.add_info("stellar.lum_ly_young", lum_ly_young, True, unit='W')
+        sed.add_info("stellar.n_ly_young", NLy_young, True,
+                     unit='ph/s')
 
         sed.add_info('stellar.mass_total_old', info_old[0], True,
                      unit='solMass')
@@ -157,6 +171,9 @@ class M2005(SedModule):
         sed.add_info('stellar.mass_black_hole_old', info_old[4], True,
                      unit='solMass')
         sed.add_info('stellar.lum_old', lum_old, True, unit='W')
+        sed.add_info("stellar.lum_ly_old", lum_ly_old, True, unit='W')
+        sed.add_info("stellar.n_ly_old", NLy_old, True,
+                     unit='ph/s')
 
         sed.add_info('stellar.mass_total', info_all[0], True, unit='solMass')
         sed.add_info('stellar.mass_alive', info_all[1], True, unit='solMass')
@@ -167,6 +184,10 @@ class M2005(SedModule):
                      unit='solMass')
         sed.add_info('stellar.age_mass', info_all[5], unit='Myr')
         sed.add_info('stellar.lum', lum_young + lum_old, True, unit='W')
+        sed.add_info("stellar.lum_ly", lum_ly_young + lum_ly_old, True,
+                     unit='W')
+        sed.add_info("stellar.n_ly", NLy_young + NLy_old, True,
+                     unit='ph/s')
 
         sed.add_contribution("stellar.old", self.ssp.wl, spec_old)
         sed.add_contribution("stellar.young", self.ssp.wl, spec_young)
