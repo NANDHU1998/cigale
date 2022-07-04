@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+### Added
+### Changed
+### Fixed
+### Optimised
+
 ## 2022.1 (2022-07-04)
 ### Added
 - By default CIGALE adds 10% of the flux in quadrature to the uncertainties to represent sources of uncertainty that are not included by default in the photometric error bars. Changing this value required manually changing a source file. Now this setting is directly available in the `pcigale.ini` file. (Médéric Boquien)
