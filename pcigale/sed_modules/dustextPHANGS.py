@@ -2,8 +2,7 @@
 Simple screen extinction module
 =====================================================================
 
-This module implements various screen extinction laws, including NW, LMC, and
-SMC laws.
+This module implements a simple dust extinction with self-absorption
 
 """
 
@@ -26,9 +25,10 @@ class FitzIndeb:
             ),
             format="ascii",
         )
+        tableFitzIndeb["opacity"][tableFitzIndeb["wave"] < 911.0] = 0.0
         self.interpolator = interp1d(
             tableFitzIndeb["wave"].data * 0.1,
-            tableFitzIndeb["opacity"].data / 211.4 * 3.1,
+            tableFitzIndeb["opacity"].data / 211.4,
             fill_value=0.0,
             bounds_error=False,
         )
@@ -40,8 +40,7 @@ class FitzIndeb:
 class DustExtinction(SedModule):
     """Screen extinction law
 
-    This module computes the screen extinction from various classical
-    extinctions laws for the MW, the LMC, and the SMC
+    This module computes the screen extinction with the Indebetouw curve.
 
     The extinction is computed for all the components and is added to the SED as
     a negative contribution.
@@ -52,7 +51,7 @@ class DustExtinction(SedModule):
         [
             (
                 "A550",
-                ("cigale_list(minvalue=0.)", "Attenuation at 55 nm.", 0.3),
+                ("cigale_list(minvalue=0.)", "Attenuation at 550 nm.", 0.3),
             ),
             (
                 "filters",
