@@ -120,7 +120,7 @@ class DL2014(SedModule):
         self.model_minmax.spec *= self.gamma / self.emissivity
 
         if self.self_abs is True:
-            self.att = FitzIndeb().interp(self.model_minmin.wave)
+            self.att = FitzIndeb().interp(self.model_minmin.wl)
 
     def process(self, sed):
         """Add the IR re-emission contributions
@@ -147,10 +147,10 @@ class DL2014(SedModule):
 
         if self.self_abs is True:
             att = 10.0 ** (-0.4 * self.att * sed.info['attenuation.E_BV'] * 3.08) - 1.0
-            luminosity /= 1. + np.trapz(att * (self.model_minmin.lumin + self.model_minmax.lumin), x=self.model_minmin.wave)
-            sed.add_contribution('dust.att_Umin_Umin', self.model_minmin.wave,
+            luminosity /= 1. + np.trapz(att * (self.model_minmin.lumin + self.model_minmax.lumin), x=self.model_minmin.wl)
+            sed.add_contribution('dust.att_Umin_Umin', self.model_minmin.wl,
                                  luminosity * self.model_minmin.lumin * att)
-            sed.add_contribution('dust.att_Umin_Umax', self.model_minmax.wave,
+            sed.add_contribution('dust.att_Umin_Umax', self.model_minmax.wl,
                                  luminosity * self.model_minmax.lumin * att)
 
         sed.add_contribution('dust.Umin_Umin', self.model_minmin.wl,
