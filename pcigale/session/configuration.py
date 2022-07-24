@@ -350,7 +350,7 @@ class Configuration:
     def complete_lines(self):
         """Complete nebular line list with catalogue ones."""
 
-        if 'nebular' not in self.config['sed_modules_params']:
+        if 'nebular' not in self.config['sed_modules']:
             return
 
         # Lines asked for in nebular configuration
