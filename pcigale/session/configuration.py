@@ -15,7 +15,7 @@ from .. import sed_modules
 from .. import analysis_modules
 from ..warehouse import SedWarehouse
 from . import validation
-from pcigale.sed_modules.nebular import default_lines
+from pcigale.sed_modules.nebular import AVAILABLE_LINES
 from pcigale.utils.console import console, INFO, ERROR
 
 
@@ -183,7 +183,7 @@ class Configuration:
         # Getting the list of the filters available in pcigale database
         with Database("filters") as db:
             filter_list = db.parameters["name"]
-        filter_list += [f'line.{line}' for line in default_lines]
+        filter_list += [f'line.{line}' for line in AVAILABLE_LINES]
 
         if self.config['data_file'] != '':
             obs_table = read_table(self.config['data_file'])
@@ -297,6 +297,7 @@ class Configuration:
             raise Exception("pcigale.ini could not be found.")
 
         self.complete_redshifts()
+        self.complete_lines()
         self.check_and_complete_analysed_parameters()
 
         vdt = validate.Validator(validation.functions)
@@ -345,6 +346,28 @@ class Configuration:
             else:
                 raise Exception("No flux file and no redshift indicated. "
                                 "The spectra cannot be computed. Aborting.")
+
+    def complete_lines(self):
+        """Complete nebular line list with catalogue ones."""
+
+        if 'nebular' not in self.config['sed_modules_params']:
+            return
+
+        # Lines asked for in nebular configuration
+        line_list = {
+            name.strip() for name in
+            self.config['sed_modules_params']['nebular']['line_list'].split('&')
+        }
+
+        # Lines from the band configuration
+        line_list.update({
+            name[5:] for name in self.config['bands'] if
+            name.startswith('line.') and not name.endswith('_err')
+        })
+
+        self.config['sed_modules_params']['nebular']['line_list'] = (
+            " & ".join(line_list)
+        )
 
     def check_and_complete_analysed_parameters(self):
         """Check that the variables to be analysed are indeed computed and if "
