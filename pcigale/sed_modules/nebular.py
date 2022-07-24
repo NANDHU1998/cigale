@@ -121,8 +121,13 @@ class NebularEmission(SedModule):
         self.ne = float(self.parameters["ne"])
         self.fesc = float(self.parameters["f_esc"])
         self.fdust = float(self.parameters["f_dust"])
-        self.line_list = {name.strip() for name in
-                          self.parameters["line_list"].split('&')}
+
+        self.line_list = {
+            name.strip() for name
+            in self.parameters["line_list"].split('&')
+            if name.strip()  # to avoid empty string if no line list
+        }
+
         self.lines_width = float(self.parameters["lines_width"])
         if isinstance(self.parameters["emission"], str):
             self.emission = self.parameters["emission"].lower() == "true"
