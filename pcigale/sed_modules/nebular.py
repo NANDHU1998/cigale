@@ -96,7 +96,7 @@ class NebularEmission(SedModule):
              "'line.H-alpha') in the input catalogue and in the 'bands' "
              "configuration above will be used for fitting or to generate "
              "fluxes in savefluxes mode.  If you want to estimate line "
-             "line fluxes while fitting, add the 'line.<nmae>' in the "
+             "line fluxes while fitting, add the 'line.<name>' in the "
              "bands configuration of the pdf_analysis module."),
             ""
         ),
