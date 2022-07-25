@@ -297,7 +297,7 @@ class Configuration:
             raise Exception("pcigale.ini could not be found.")
 
         self.complete_redshifts()
-        self.complete_lines()
+        self.add_line_list()
         self.check_and_complete_analysed_parameters()
 
         vdt = validate.Validator(validation.functions)
@@ -347,23 +347,24 @@ class Configuration:
                 raise Exception("No flux file and no redshift indicated. "
                                 "The spectra cannot be computed. Aborting.")
 
-    def complete_lines(self):
-        """Complete nebular line list with catalogue ones."""
+    def add_line_list(self):
+        """Add the list of lines to compute to the nebular module."""
 
         if 'nebular' not in self.config['sed_modules']:
             return
 
-        # Lines asked for in nebular configuration
+        # Lines used in the fitted bands.
         line_list = {
-            name.strip() for name in
-            self.config['sed_modules_params']['nebular']['line_list'].split('&')
-        }
-
-        # Lines from the band configuration
-        line_list.update({
             name[5:] for name in self.config['bands'] if
             name.startswith('line.') and not name.endswith('_err')
-        })
+        }
+
+        # Lines estimated in the pdf_analysis module.
+        if self.config['analysis_method'] == 'pdf_analysis':
+            line_list.update({
+                name[5:] for name in self.config['analysis_params']['bands']
+                if name.startswith('line.')
+            })
 
         self.config['sed_modules_params']['nebular']['line_list'] = (
             " & ".join(line_list)

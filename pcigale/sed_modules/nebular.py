@@ -91,13 +91,13 @@ class NebularEmission(SedModule):
         ),
         "line_list": (
             "string()",
-            ("List of lines for which the flux will be computed, separated "
-             "by a &. The lines that are present in the input catalogue "
-             "will be added to this list. Please, refer to the documentation "
-             "to know the list of available lines.  If you are doing a PDF "
-             "analysis, you will probably want to add them to the bands "
-             "parameter of this module too as `line.<name>` bands (e.g. "
-             "line.H-alpha)."),
+            ("Please, leave this empty. This is a placeholder to keep the "
+             "name of the lines that will be used.  The 'line.<name>' (e.g. "
+             "'line.H-alpha') in the input catalogue and in the 'bands' "
+             "configuration above will be used for fitting or to generate "
+             "fluxes in savefluxes mode.  If you want to estimate line "
+             "line fluxes while fitting, add the 'line.<nmae>' in the "
+             "bands configuration of the pdf_analysis module."),
             ""
         ),
         "lines_width": (
@@ -122,6 +122,7 @@ class NebularEmission(SedModule):
         self.fesc = float(self.parameters["f_esc"])
         self.fdust = float(self.parameters["f_dust"])
 
+        # The line list is updated from the fitted and estimated band list.
         self.line_list = {
             name.strip() for name
             in self.parameters["line_list"].split('&')
