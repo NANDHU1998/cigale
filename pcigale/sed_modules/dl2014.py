@@ -146,7 +146,7 @@ class DL2014(SedModule):
         sed.add_info('dust.mass', luminosity / self.emissivity, True, unit='kg')
 
         if self.self_abs is True:
-            att = 10.0 ** (-0.4 * self.att * sed.info['attenuation.V_B90'] * 3.08) - 1.0
+            att = 10.0 ** (-0.4 * self.att * sed.info['attenuation.A550']) - 1.0
             luminosity /= 1. + np.trapz(att * (self.model_minmin.spec + self.model_minmax.spec), x=self.model_minmin.wl)
             sed.add_contribution('dust.att_Umin_Umin', self.model_minmin.wl,
                                  luminosity * self.model_minmin.spec * att)
