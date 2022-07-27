@@ -42,6 +42,10 @@ class SED(Plotter):
         obs = read_table(outdir.parent / self.configuration["data_file"])
         mod = Table.read(outdir / BEST_RESULTS)
 
+        # Replace masked values by NaN to suppress warnings
+        obs = obs.filled(np.nan)
+        mod = mod.filled(np.nan)
+
         with Database("filters") as db:
             filters = {
                 name: db.get(name=name)
