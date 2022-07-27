@@ -151,7 +151,7 @@ class DL2014(SedModule):
             sed.add_contribution('dust.att_Umin_Umin', self.model_minmin.wl,
                                  luminosity * self.model_minmin.spec * att)
             sed.add_contribution('dust.att_Umin_Umax', self.model_minmax.wl,
-                                 luminosity * self.model_minmax.lumin * att)
+                                 luminosity * self.model_minmax.spec * att)
 
         sed.add_contribution('dust.Umin_Umin', self.model_minmin.wl,
                              luminosity * self.model_minmin.spec)
