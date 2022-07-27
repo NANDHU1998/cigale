@@ -18,20 +18,21 @@ from scipy.interpolate import interp1d
 
 
 class FitzIndeb:
+    tableFitzIndeb = Table.read(
+        pkg_resources.resource_filename(
+            __name__, f"curves/FitzIndeb_3.1.fits"
+        )
+    )
+    tableFitzIndeb["opacity"][tableFitzIndeb["wave"] < 911.0] = 0.0
+    interpolator = interp1d(
+        tableFitzIndeb["wave"].data * 0.1,
+        tableFitzIndeb["opacity"].data / 211.4,
+        fill_value=0.0,
+        bounds_error=False,
+    )
+
     def __init__(self):
-        tableFitzIndeb = Table.read(
-            pkg_resources.resource_filename(
-                __name__, f"curves/FitzIndeb_3.1.dat"
-            ),
-            format="ascii",
-        )
-        tableFitzIndeb["opacity"][tableFitzIndeb["wave"] < 911.0] = 0.0
-        self.interpolator = interp1d(
-            tableFitzIndeb["wave"].data * 0.1,
-            tableFitzIndeb["opacity"].data / 211.4,
-            fill_value=0.0,
-            bounds_error=False,
-        )
+        pass
 
     def interp(self, wl):
         return self.interpolator(wl)
