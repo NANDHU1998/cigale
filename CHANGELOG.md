@@ -3,6 +3,7 @@
 ## Unreleased
 ### Added
 ### Changed
+- Any known line can now be used for fitting or for estimating the flux probability distribution without modifying the nebular module source.
 ### Fixed
 - The masked values in the observation and results are replaced by NaN when plotting in order to suppress a Matplotlib warning. (Médéric Boquien)
 - Numpy floating-point errors have been disabled as they do not provide useful information to the end use while generating output noise. (Médéric Boquien)

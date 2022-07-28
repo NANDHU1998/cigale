@@ -6,37 +6,32 @@ from . import SedModule
 
 __category__ = "nebular"
 
-default_lines = [
-        "ArIII-713.6",
-        "CII-232.4",
-        "CII-232.47",
-        "CII-232.54",
-        "CII-232.7",
-        "CII-232.8",
-        "CIII-190.7",
-        "CIII-190.9",
-        "H-alpha",
-        "H-beta",
-        "H-delta",
-        "H-gamma",
-        "HeII-164.0",
-        "Ly-alpha",
-        "NII-654.8",
-        "NII-658.3",
-        "NeIII-396.7",
-        "OI-630.0",
-        "OII-372.6",
-        "OII-372.9",
-        "OIII-495.9",
-        "OIII-500.7",
-        "Pa-alpha",
-        "Pa-beta",
-        "Pa-gamma",
-        "SII-671.6",
-        "SII-673.1",
-        "SIII-906.9",
-        "SIII-953.1",
-]
+AVAILABLE_LINES = {
+    'AlII-266.0', 'AlII-266.9', 'AlIII-185.5', 'AlIII-186.3', 'ArII-310.9',
+    'ArII-6.983', 'ArIII-21.83', 'ArIII-519.2', 'ArIII-713.6', 'ArIII-775.1',
+    'ArIII-8.989', 'ArIV-733.2', 'Br-10', 'Br-9', 'Br-alpha', 'Br-beta',
+    'Br-delta', 'Br-gamma', 'CI-462.2', 'CI-872.7', 'CI-982.4', 'CI-985.0',
+    'CII-157.6', 'CII-232.4', 'CII-232.47', 'CII-232.54', 'CII-232.7',
+    'CII-232.8', 'CIII-190.7', 'CIII-190.9', 'CIV-154.8', 'CIV-155.1',
+    'ClII-14.36', 'ClII-857.9', 'ClII-912.4', 'ClIII-551.8', 'ClIII-553.8',
+    'FeII-25.98', 'H-10', 'H-8', 'H-9', 'H-alpha', 'H-beta', 'H-delta',
+    'H-epsilon', 'H-gamma', 'HeI-1.083', 'HeI-388.9', 'HeI-447.1', 'HeI-587.5',
+    'HeI-667.8', 'HeI-706.5', 'HeII-164.0', 'Ly-alpha', 'MgII-279.6',
+    'MgII-280.3', 'NI-519.8', 'NI-520.0', 'NII-121.8', 'NII-205.2',
+    'NII-213.9', 'NII-214.3', 'NII-575.5', 'NII-654.8', 'NII-658.3',
+    'NIII-57.32', 'NeII-12.81', 'NeIII-15.55', 'NeIII-181.4', 'NeIII-334.2',
+    'NeIII-36.00', 'NeIII-386.9', 'NeIII-396.7', 'NeIV-242.2', 'NeIV-242.4',
+    'NeIV-471.4', 'NeIV-471.6', 'NeIV-472.4', 'NeIV-472.6', 'NeV-334.6',
+    'NeV-342.6', 'OI-145.5', 'OI-557.7', 'OI-63.17', 'OI-630.0', 'OI-636.4',
+    'OI-639.2', 'OII-247.02', 'OII-247.03', 'OII-372.6', 'OII-372.9',
+    'OII-731.9', 'OII-732.0', 'OII-733.0', 'OII-733.1', 'OIII-166.1',
+    'OIII-166.6', 'OIII-232.1', 'OIII-436.3', 'OIII-495.9', 'OIII-500.7',
+    'OIII-51.80', 'OIII-88.33', 'OIV-25.88', 'PII-32.86', 'PII-60.62', 'Pa-10',
+    'Pa-8', 'Pa-9', 'Pa-alpha', 'Pa-beta', 'Pa-delta', 'Pa-gamma', 'SII-1.028',
+    'SII-1.032', 'SII-1.034', 'SII-1.037', 'SII-406.9', 'SII-407.6',
+    'SII-671.6', 'SII-673.1', 'SIII-18.71', 'SIII-33.47', 'SIII-372.2',
+    'SIII-631.2', 'SIII-906.9', 'SIII-953.1', 'SIV-10.51', 'SiII-34.80'
+}
 
 
 class NebularEmission(SedModule):
@@ -94,6 +89,17 @@ class NebularEmission(SedModule):
             "values between 0 and 1.",
             0.
         ),
+        "line_list": (
+            "string()",
+            ("Please, leave this empty. This is a placeholder to keep the "
+             "name of the lines that will be used.  The 'line.<name>' (e.g. "
+             "'line.H-alpha') in the input catalogue and in the 'bands' "
+             "configuration above will be used for fitting or to generate "
+             "fluxes in savefluxes mode.  If you want to estimate line "
+             "line fluxes while fitting, add the 'line.<name>' in the "
+             "bands configuration of the pdf_analysis module."),
+            ""
+        ),
         "lines_width": (
             "cigale_list(minvalue=0.)",
             "Line width in km/s.",
@@ -115,6 +121,14 @@ class NebularEmission(SedModule):
         self.ne = float(self.parameters["ne"])
         self.fesc = float(self.parameters["f_esc"])
         self.fdust = float(self.parameters["f_dust"])
+
+        # The line list is updated from the fitted and estimated band list.
+        self.line_list = {
+            name.strip() for name
+            in self.parameters["line_list"].split('&')
+            if name.strip()  # to avoid empty string if no line list
+        }
+
         self.lines_width = float(self.parameters["lines_width"])
         if isinstance(self.parameters["emission"], str):
             self.emission = self.parameters["emission"].lower() == "true"
@@ -130,6 +144,11 @@ class NebularEmission(SedModule):
 
         if self.fesc + self.fdust > 1:
             raise Exception("Escape fraction+f_dust>1")
+
+        # Check line names
+        missing_lines = self.line_list - AVAILABLE_LINES
+        if missing_lines:
+            raise ValueError(f"Unknown lines: {', '.join(missing_lines)}.")
 
         if self.emission:
             with Database("nebular_continuum") as db:
@@ -224,7 +243,7 @@ class NebularEmission(SedModule):
             sed.add_info("nebular.zgas", self.zgas)
             sed.add_info("nebular.ne", self.ne, unit="cm^-3")
 
-            for line in default_lines:
+            for line in self.line_list:
                 wave, ratio = linesdict[line]
                 sed.lines[line] = (wave,
                                    ratio * NLy_old * self.corr,
