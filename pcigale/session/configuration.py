@@ -15,7 +15,6 @@ from .. import sed_modules
 from .. import analysis_modules
 from ..warehouse import SedWarehouse
 from . import validation
-from pcigale.sed_modules.nebular import AVAILABLE_LINES
 from pcigale.utils.console import console, INFO, ERROR
 
 
@@ -183,7 +182,10 @@ class Configuration:
         # Getting the list of the filters available in pcigale database
         with Database("filters") as db:
             filter_list = db.parameters["name"]
-        filter_list += [f'line.{line}' for line in AVAILABLE_LINES]
+        with Database("nebular_lines") as db:
+            lines = db.get(Z=0.02, logU=-2.0, ne=100.0).name
+
+        filter_list += [f'line.{line}' for line in lines]
 
         if self.config['data_file'] != '':
             obs_table = read_table(self.config['data_file'])
