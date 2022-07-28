@@ -2,6 +2,7 @@
 
 ## Unreleased
 ### Added
+- The `pcigale-filters list` command now also provides the list of nebular emission lines. (Médéric Boquien)
 ### Changed
 - Any known line can now be used for fitting or for estimating the flux probability distribution without modifying the nebular module source. (Yannick Roehlly & Médéric Boquien)
 ### Fixed

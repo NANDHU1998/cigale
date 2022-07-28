@@ -31,6 +31,16 @@ def list_filters():
     t.sort(['Pivot Wavelength'])
     t.pprint(max_lines=-1, max_width=-1)
 
+    with Database("nebular_lines") as base:
+        lines = base.get(Z=0.02, logU=-2.0, ne=100.0)
+
+    name = Column(data=lines.name, name='Name')
+    wl = Column(data=lines.wl, name='Wavelength', unit=u.nm, format='%.3f')
+
+    t = Table()
+    t.add_columns([name, wl])
+    t.sort(['Wavelength'])
+    t.pprint(max_lines=-1, max_width=-1)
 
 def add_filters(fnames):
     """Add filters to the pcigale database.
