@@ -18,14 +18,15 @@ class AnalysisModule:
     # default value, use the 'None' string instead.
     parameters = dict()
 
-    def __init__(self, **kwargs):
+    def __init__(self, blank=False, **kwargs):
         """Instantiate a analysis module
 
         The module parameters values can be passed as keyword parameters.
         """
         # parameters is a dictionary containing the actual values for each
         # module parameter.
-        self.parameters = kwargs
+        if not blank:
+            self.parameters = kwargs
 
     def _process(self, configuration):
         """Do the actual analysis
@@ -111,7 +112,7 @@ class AnalysisModule:
         self._process(configuration)
 
 
-def get_module(module_name):
+def get_module(module_name, **kwargs):
     """Return the main class of the module provided
 
     Parameters
@@ -126,6 +127,6 @@ def get_module(module_name):
 
     try:
         module = import_module('.' + module_name, 'pcigale.analysis_modules')
-        return module.Module()
+        return module.Module(**kwargs)
     except ImportError:
         raise Exception(f"Module {module_name} could not be imported.")

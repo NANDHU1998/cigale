@@ -123,7 +123,6 @@ class SedModule:
                 self.parameters = complete_parameters(parameters,
                                                       self.parameters,
                                                       set())
-
             # Run the initialisation code specific to the module.
             self._init_code()
 

@@ -280,7 +280,8 @@ class Configuration:
 
         module_name = self.config['analysis_method']
         for name, (typ, desc, default) in \
-                analysis_modules.get_module(module_name).parameters.items():
+                analysis_modules.get_module(module_name,
+                                            blank=True).parameters.items():
             if default is None:
                 default = ''
             self.config['analysis_params'][name] = default
