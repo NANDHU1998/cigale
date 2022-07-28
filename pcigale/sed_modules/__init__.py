@@ -3,7 +3,7 @@ import inspect
 import os
 
 
-def complete_parameters(given_parameters, parameter_list):
+def complete_parameters(given_parameters, parameter_list, hidden):
     """Complete the given parameter list with the default values
 
     Complete the given_parameters dictionary with missing parameters that have
@@ -18,6 +18,8 @@ def complete_parameters(given_parameters, parameter_list):
         Parameter dictionary used to configure the module.
     parameter_list: dictionary
         Parameter list from the module.
+    hidden: set
+        Hidden parameters
 
     Returns
     -------
@@ -35,26 +37,25 @@ def complete_parameters(given_parameters, parameter_list):
         if (key not in given_parameters) and (
                 parameter_list[key][2] is not None):
             given_parameters[key] = parameter_list[key][2]
+
     # Check parameter consistency between the parameter list and the given
     # parameters.
-    if not set(given_parameters) == set(parameter_list):
-        missing_parameters = (set(parameter_list) - set(given_parameters))
-        unexpected_parameters = (set(given_parameters) - set(parameter_list))
-        message = ""
-        if missing_parameters:
-            message += ("Missing parameters: " +
-                        ", ".join(missing_parameters) +
-                        ". ")
-        if unexpected_parameters:
-            message += ("Unexpected parameters: " +
-                        ", ".join(unexpected_parameters) +
-                        ". ")
-        raise KeyError("The parameters passed are different from the "
-                       "expected one. " + message)
+    missing_parameters = set(parameter_list) - set(given_parameters)
+    if len(missing_parameters) > 0:
+        message = f"Missing parameters: {', '.join(missing_parameters)}."
+        raise KeyError(message)
+
+    unexpected_parameters = set(given_parameters) - set(parameter_list) - hidden
+    if len(unexpected_parameters) > 0:
+        message = (f"Unexpected parameters: {', '.join(unexpected_parameters)}.")
+        raise KeyError(message)
 
     # We want the result to be ordered as the parameter_list of the module is.
     result = dict()
     for key in parameter_list:
+        result[key] = given_parameters[key]
+
+    for key in hidden:
         result[key] = given_parameters[key]
 
     return result
@@ -114,8 +115,14 @@ class SedModule:
             parameters = kwargs
 
             # Complete the parameter dictionary and "export" it to the module
-            self.parameters = complete_parameters(parameters,
-                                                  self.parameter_list)
+            if hasattr(self, "hidden_parameters"):
+                self.parameters = complete_parameters(parameters,
+                                                      self.parameter_list,
+                                                      self.hidden_parameters)
+            else:
+                self.parameters = complete_parameters(parameters,
+                                                      self.parameter_list,
+                                                      set())
 
             # Run the initialisation code specific to the module.
             self._init_code()

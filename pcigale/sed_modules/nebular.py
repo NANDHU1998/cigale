@@ -62,17 +62,6 @@ class NebularEmission(SedModule):
             "values between 0 and 1.",
             0.
         ),
-        "line_list": (
-            "string()",
-            ("Please, leave this empty. This is a placeholder to keep the "
-             "name of the lines that will be used.  The 'line.<name>' (e.g. "
-             "'line.H-alpha') in the input catalogue and in the 'bands' "
-             "configuration above will be used for fitting or to generate "
-             "fluxes in savefluxes mode.  If you want to estimate line "
-             "line fluxes while fitting, add the 'line.<name>' in the "
-             "bands configuration of the pdf_analysis module."),
-            ""
-        ),
         "lines_width": (
             "cigale_list(minvalue=0.)",
             "Line width in km/s.",
@@ -84,6 +73,8 @@ class NebularEmission(SedModule):
             True
         )
     }
+
+    hidden_parameters = {"line_list"}
 
     def _init_code(self):
         """Get the nebular emission lines out of the database and resample
@@ -120,37 +111,32 @@ class NebularEmission(SedModule):
 
         if self.emission:
             with Database("nebular_continuum") as db:
-                metallicities = db.parameters["Z"]
-                self.cont_template = {m: db.get(Z=m, logU=self.logU, ne=self.ne)
-                                      for m in metallicities}
+                self.cont_template = db.get(Z=self.zgas, logU=self.logU, ne=self.ne)
 
             with Database("nebular_lines") as db:
-                self.lines_template = {m: db.get(Z=m, logU=self.logU, ne=self.ne)
-                                       for m in metallicities}
+                self.lines_template = db.get(Z=self.zgas, logU=self.logU, ne=self.ne)
 
-            self.linesdict = {m: dict(zip(self.lines_template[m].name,
-                                          zip(self.lines_template[m].wl,
-                                              self.lines_template[m].spec)))
-                              for m in metallicities}
+            self.linesdict = dict(zip(self.lines_template.name,
+                                          zip(self.lines_template.wl,
+                                              self.lines_template.spec)))
 
-            for lines in self.lines_template.values():
-                new_wave = np.array([])
-                for line_wave in lines.wl:
-                    width = line_wave * self.lines_width * 1e3 / cst.c
-                    new_wave = np.concatenate((new_wave,
-                                               np.linspace(line_wave - 3. * width,
-                                                           line_wave + 3. * width,
-                                                           9)))
-                new_wave.sort()
-                new_flux = np.zeros_like(new_wave)
-                log2 = np.log(2)
-                for line_flux, line_wave in zip(lines.spec, lines.wl):
-                    width = line_wave * self.lines_width * 1e3 / cst.c
-                    new_flux += (line_flux * np.exp(- 4. * log2 *
-                                (new_wave - line_wave) ** 2. / (width * width)) /
-                                (width * np.sqrt(np.pi / log2) / 2.))
-                lines.wl = new_wave
-                lines.spec = new_flux
+            new_wave = np.array([])
+            for line_wave in self.lines_template.wl:
+                width = line_wave * self.lines_width * 1e3 / cst.c
+                new_wave = np.concatenate((new_wave,
+                                            np.linspace(line_wave - 3. * width,
+                                                        line_wave + 3. * width,
+                                                        9)))
+            new_wave.sort()
+            new_flux = np.zeros_like(new_wave)
+            log2 = np.log(2)
+            for line_flux, line_wave in zip(self.lines_template.spec, self.lines_template.wl):
+                width = line_wave * self.lines_width * 1e3 / cst.c
+                new_flux += (line_flux * np.exp(- 4. * log2 *
+                            (new_wave - line_wave) ** 2. / (width * width)) /
+                            (width * np.sqrt(np.pi / log2) / 2.))
+            self.lines_template.wl = new_wave
+            self.lines_template.spec = new_flux
 
             # To take into acount the escape fraction and the fraction of Lyman
             # continuum photons absorbed by dust we correct by a factor
@@ -201,10 +187,8 @@ class NebularEmission(SedModule):
         if self.emission:
             NLy_old = sed.info["stellar.n_ly_old"]
             NLy_young = sed.info["stellar.n_ly_young"]
-            metallicity = self.zgas
-            lines = self.lines_template[metallicity]
-            linesdict = self.linesdict[metallicity]
-            cont = self.cont_template[metallicity]
+            lines = self.lines_template
+            cont = self.cont_template
 
             sed.add_info("nebular.lines_width", self.lines_width, unit="km/s")
             sed.add_info("nebular.logU", self.logU)
@@ -212,7 +196,7 @@ class NebularEmission(SedModule):
             sed.add_info("nebular.ne", self.ne, unit="cm^-3")
 
             for line in self.line_list:
-                wave, ratio = linesdict[line]
+                wave, ratio = self.linesdict[line]
                 sed.lines[line] = (wave,
                                    ratio * NLy_old * self.corr,
                                    ratio * NLy_young * self.corr)
