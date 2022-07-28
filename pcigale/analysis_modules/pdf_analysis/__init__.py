@@ -39,7 +39,7 @@ from pcigale.utils.console import console, INFO
 class PdfAnalysis(AnalysisModule):
     """PDF analysis module"""
 
-    parameter_list = {
+    parameters = {
         "variables": (
             "cigale_string_list()",
             "List of the physical properties to estimate. Leave empty to "

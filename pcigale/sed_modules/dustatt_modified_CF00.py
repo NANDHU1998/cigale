@@ -67,7 +67,7 @@ class ModCF00Att(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "Av_ISM": (
             "cigale_list(minvalue=0)",
             "V-band attenuation in the interstellar medium.",

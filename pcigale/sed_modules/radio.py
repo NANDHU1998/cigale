@@ -22,7 +22,7 @@ class Radio(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "qir_sf": (
             "cigale_list(minvalue=0.)",
             "The value of the FIR/radio correlation coefficient for star "

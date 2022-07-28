@@ -34,7 +34,7 @@ class SfhBuat08(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "velocity": (
             "cigale_list(minvalue=40., maxvalue=360.)",
             "Rotational velocity of the galaxy in km/s. Must be between 40 "

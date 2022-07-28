@@ -253,7 +253,7 @@ class Configuration:
             for name, (typ, description, default) in \
                     sed_modules.get_module(
                         module_name,
-                        blank=True).parameter_list.items():
+                        blank=True).parameters.items():
                 if default is None:
                     default = ''
                 sub_config[name] = default
@@ -270,7 +270,7 @@ class Configuration:
 
         module_name = self.config['analysis_method']
         for name, (typ, desc, default) in \
-                analysis_modules.get_module(module_name).parameter_list.items():
+                analysis_modules.get_module(module_name).parameters.items():
             if default is None:
                 default = ''
             self.config['analysis_params'][name] = default

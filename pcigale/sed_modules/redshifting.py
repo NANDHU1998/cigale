@@ -140,7 +140,7 @@ class Redshifting(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "redshift": (
             "cigale_list(minvalue=0.)",
             "Redshift of the objects. Leave empty to use the redshifts from the"

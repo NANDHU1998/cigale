@@ -147,7 +147,7 @@ class Fritz2006(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         'r_ratio': (
             "cigale_list(options=10. & 30. & 60. & 100. & 150.)",
             "Ratio of the maximum to minimum radii of the dust torus. "

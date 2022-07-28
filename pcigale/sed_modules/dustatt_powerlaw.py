@@ -104,7 +104,7 @@ class PowerLawAtt(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "Av_young": (
             "cigale_list(minvalue=0.)",
             "V-band attenuation of the young population.",

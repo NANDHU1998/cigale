@@ -298,7 +298,7 @@ class ModStarburstAtt(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "E_BV_lines": (
             "cigale_list(minvalue=0.)",
             "E(B-V)l, the colour excess of the nebular lines light for "

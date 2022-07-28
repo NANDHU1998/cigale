@@ -25,7 +25,7 @@ class SfhFromFile(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "filename": (
             "string()",
             "Name of the file containing the SFH. The first column must be "

@@ -24,7 +24,7 @@ class Dale2014(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         'fracAGN': (
             'cigale_list(minvalue=0., maxvalue=1.)',
             "AGN fraction. It is not recommended to combine this AGN emission "

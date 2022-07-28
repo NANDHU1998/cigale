@@ -22,7 +22,7 @@ class Sfh2Exp(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "tau_main": (
             "cigale_list()",
             "e-folding time of the main stellar population model in Myr.",

@@ -10,13 +10,13 @@ class AnalysisModule:
     """Abstract class, the pCigale analysis modules are based on.
     """
 
-    # parameter_list is a dictionary containing all the parameters
-    # used by the module. Each parameter name is associate to a tuple
-    # (variable type, description [string], default value). Each module must
-    # define its parameter list, unless it does not use any parameter. Using
-    # None means that there is no description, unit or default value. If None
-    # should be the default value, use the 'None' string instead.
-    parameter_list = dict()
+    # parameters is a dictionary containing all the parameters used by the
+    # module. Each parameter name is associate to a tuple (variable type,
+    # description [string], default value). Each module must define its
+    # parameters, unless it does not use any parameter. Using None means that
+    # there is no description, unit or default value. If None should be the
+    # default value, use the 'None' string instead.
+    parameters = dict()
 
     def __init__(self, **kwargs):
         """Instantiate a analysis module
@@ -62,8 +62,8 @@ class AnalysisModule:
 
         This method is responsible for checking the module parameters before
         doing the actual processing (_process method). If a parameter is not
-        given but exists in the parameter_list with a default value, this
-        value is used.
+        given but exists in parameters with a default value, this value is
+        used.
 
         Parameters
         ----------
@@ -80,22 +80,21 @@ class AnalysisModule:
 
         """
         parameters = configuration['analysis_params']
-        # For parameters that are present on the parameter_list with a default
-        # value and that are not in the parameters dictionary, we add them
-        # with their default value.
-        for key in self.parameter_list:
+        # For parameters that are present in parameters with a default value
+        # and that are not in the parameters dictionary, we add them with
+        # their default value.
+        for key in self.parameters:
             if (key not in parameters) and (
-                    self.parameter_list[key][2] is not None):
-                parameters[key] = self.parameter_list[key][2]
+                    self.parameters[key][2] is not None):
+                parameters[key] = self.parameters[key][2]
 
         # If the keys of the parameters dictionary are different from the one
-        # of the parameter_list dictionary, we raises a KeyError. That means
+        # of the parameters dictionary, we raises a KeyError. That means
         # that a parameter is missing (and has no default value) or that an
         # unexpected one was given.
-        if not set(parameters) == set(self.parameter_list):
-            missing_parameters = (set(self.parameter_list) - set(parameters))
-            unexpected_parameters = (set(parameters) -
-                                     set(self.parameter_list))
+        if not set(parameters) == set(self.parameters):
+            missing_parameters = (set(self.parameters) - set(parameters))
+            unexpected_parameters = (set(parameters) - set(self.parameters))
             message = ""
             if missing_parameters:
                 message += ("Missing parameters: " +

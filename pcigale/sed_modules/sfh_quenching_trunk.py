@@ -20,7 +20,7 @@ class SfhQuenchTrunk(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "quenching_age": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Look-back time when the quenching happens in Myr.",

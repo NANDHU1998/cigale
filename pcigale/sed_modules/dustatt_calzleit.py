@@ -189,7 +189,7 @@ class CalzLeit(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "E_BVs_young": (
             "cigale_list(minvalue=0.)",
             "E(B-V)*, the colour excess of the stellar continuum light for "

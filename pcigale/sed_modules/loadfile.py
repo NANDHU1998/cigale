@@ -15,7 +15,7 @@ class LoadSpecFile(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "filename": (
             'string()',
             "Name of the file to load and to add to the SED table. This "

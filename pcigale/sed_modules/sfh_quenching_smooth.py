@@ -20,7 +20,7 @@ class SfhQuenchSmooth(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "quenching_time": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Look-back time when the quenching starts in Myr.",

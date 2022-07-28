@@ -30,7 +30,7 @@ class SaveFluxes(AnalysisModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "variables": (
             "cigale_string_list()",
             "List of the physical properties to save. Leave empty to save all "

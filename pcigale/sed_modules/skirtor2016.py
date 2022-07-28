@@ -149,7 +149,7 @@ class SKIRTOR2016(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "t": (
             "cigale_list(options=3 & 5 & 7 & 9 & 11)",
             "Average edge-on optical depth at 9.7 micron; the actual one along"

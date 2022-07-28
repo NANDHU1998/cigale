@@ -24,7 +24,7 @@ class M2005(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         'imf': (
             'cigale_list(dtype=int, options=0. & 1.)',
             "Initial mass function: 0 (Salpeter) or 1 (Kroupa)",

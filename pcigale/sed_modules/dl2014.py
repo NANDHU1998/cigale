@@ -26,7 +26,7 @@ class DL2014(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         'qpah': (
             'cigale_list(options=0.47 & 1.12 & 1.77 & 2.50 & 3.19 & 3.90 & '
             '4.58 & 5.26 & 5.95 & 6.63 & 7.32)',

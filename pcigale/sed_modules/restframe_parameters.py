@@ -31,7 +31,7 @@ class RestframeParam(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "beta_calz94": (
             "boolean()",
             "Observed and intrinsic UV slopes β and β₀ measured in the same "

@@ -98,7 +98,7 @@ class TwoPowerLawAtt(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "Av_BC": (
             "cigale_list(minvalue=0)",
             "V-band attenuation in the birth clouds.",

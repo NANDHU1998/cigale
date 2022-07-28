@@ -23,7 +23,7 @@ class Casey2012(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "temperature": (
             "cigale_list(minvalue=0.)",
             "Temperature of the dust in K.",

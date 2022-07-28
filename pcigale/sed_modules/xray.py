@@ -21,7 +21,7 @@ class Xray(SedModule):
 
     """
 
-    parameter_list = {
+    parameters = {
         "gam": (
             "cigale_list()",
             "Photon index (Γ) of the AGN intrinsic X-ray spectrum.",
