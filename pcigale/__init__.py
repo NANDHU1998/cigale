@@ -15,6 +15,8 @@ from pathlib import Path
 import sys
 import time
 
+import numpy as np
+
 from .session.configuration import Configuration
 from .analysis_modules import get_module
 from pcigale.utils.info import Info
@@ -22,6 +24,9 @@ from pcigale.utils.console import console, INFO
 
 from pcigale.version import __version__
 
+# Suppress floating-point errors as they do not provide useful information to
+# end users while generating output noise
+np.seterr(all="ignore")
 
 def init(config):
     """Create a blank configuration file."""
