@@ -78,15 +78,19 @@ class Configuration:
             "File containing the input data. The columns are 'id' (name of the"
             " object), 'redshift' (if 0 the distance is assumed to be 10 pc), "
             "'distance' (Mpc, optional, if present it will be used in lieu "
-            "of the distance computed from the redshift), the filter names for "
-            "the fluxes, and the filter names with the '_err' suffix for the "
-            "uncertainties. The fluxes and the uncertainties must be in mJy "
-            "for broadband data and in W/m² for emission lines. Fluxes can be "
-            "positive or negative. Upper limits are indicated with a negative "
-            "value for the uncertainty. In case some fluxes are missing for "
-            "some entries, they can be replaced with NaN. This file is "
-            "optional to generate the configuration file, in particular for "
-            "the savefluxes module.")
+            "of the distance computed from the redshift), the filter (for "
+            "instance FUV) or line names (prefixed with 'line.' for the "
+            "latter, for instance line.H-alpha) for the fluxes, and the "
+            "names of the physical properties as computed by the code (e.g. "
+            "dust.luminosity). The uncertainties are given with the same "
+            "column names with the '_err' suffix. The fluxes and the "
+            "uncertainties must be in mJy for broadband data, in W/m² for "
+            "emission lines, and the unit computed by the code for the "
+            "physical proerties. Fluxes can be positive or negative. Upper "
+            "limits are indicated with a negative value for the uncertainty. "
+            "In case some fluxes are missing for some entries, they can be "
+            "replaced with NaN. This file is optional to generate the "
+            "configuration file, in particular for the savefluxes module.")
         self.spec['data_file'] = "string()"
 
         self.config['parameters_file'] = ""
@@ -218,16 +222,22 @@ class Configuration:
             self.config['bands'] = bands
         else:
             self.config['bands'] = ''
-        self.config.comments['bands'] = [""] + wrap("Bands to consider. To "
-            "consider uncertainties too, the name of the band must be "
-            "indicated with the _err suffix. For instance: FUV, FUV_err.")
+        self.config.comments['bands'] = [""] + wrap("Bands and emission lines "
+            "to consider. To take uncertainties into account, the name of "
+            "the band or line must be indicated with the _err suffix as in "
+            "the input flux file. For instance: FUV, FUV_err. The list of "
+            "allowed bands and lines can be obtained with pcigale-filters "
+            "list. Line names must be prefixed with 'line.', for instance "
+            "line.H-alpha, as in the input flux file.")
         self.spec['bands'] = "cigale_string_list()"
 
         self.config['properties'] = ''
         self.config.comments['properties'] = [""] + wrap("Properties to be "
             "considered. All properties are to be given in the rest frame "
             "rather than the observed frame. This is the case for instance "
-            "the equivalent widths and for luminosity densities.")
+            "the equivalent widths and for luminosity densities. The names "
+            "correspond to those used in the input file with the "
+            "uncertainties indicated with the _err suffix.")
         self.spec['properties'] = "cigale_string_list()"
 
         # Additional error
