@@ -51,7 +51,7 @@ def read_bc03_ssp(filename):
         else:
             bad_line_number = 6
         yield ("data")
-        for i in range(bad_line_number):
+        for _ in range(bad_line_number):
             yield ("bad")
         while True:
             yield ("data")
