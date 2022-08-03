@@ -5,7 +5,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import multiprocessing as mp
 import numpy as np
 import pkg_resources
 from scipy.constants import c
@@ -14,8 +13,7 @@ from pcigale.utils.io import read_table
 import matplotlib.gridspec as gridspec
 from pcigale.utils.counter import Counter
 
-from pcigale.utils.console import console, INFO
-from pcigale.utils.console import console, WARNING
+from pcigale.utils.console import console, INFO, WARNING, ERROR
 from pcigale_plots.plot_types import Plotter
 
 # Name of the file containing the best models information
