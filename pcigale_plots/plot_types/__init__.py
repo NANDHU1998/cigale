@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 import multiprocessing as mp
 
-from pcigale.utils.counter import Counter
-
 
 class Plotter(ABC):
     @abstractmethod
