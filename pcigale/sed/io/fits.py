@@ -6,6 +6,7 @@ import numpy as np
 
 warnings.simplefilter('ignore', AstropyUserWarning)
 
+
 def save_sed_to_fits(sed, prefix, norm=1.0):
     """
     Save a SED object to fits files
