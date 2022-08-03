@@ -408,7 +408,7 @@ class SED(Plotter):
                         zorder=3,
                         lw=1,
                     )
-                    if not mask_uplim.any() == False:
+                    if not mask_uplim.any():
                         ax1.errorbar(
                             filters_wl[mask_uplim],
                             obs_fluxes[mask_uplim],
@@ -424,7 +424,7 @@ class SED(Plotter):
                     mask_noerr = np.logical_and(
                         obs_fluxes > 0.0, obs_fluxes_err < -9990.0 * k_corr_SED
                     )
-                    if not mask_noerr.any() == False:
+                    if mask_noerr.any():
                         ax1.errorbar(
                             filters_wl[mask_noerr],
                             obs_fluxes[mask_noerr],
@@ -471,10 +471,10 @@ class SED(Plotter):
 
                 ax1.set_xlim(xmin, xmax)
 
-                if yrange[0] is not False:
+                if yrange[0]:
                     ymin = yrange[0]
                 else:
-                    if not mask_uplim.any() == False:
+                    if mask_uplim.any():
                         ymin = min(
                             min(
                                 np.min(obs_fluxes[mask_ok]),
@@ -485,7 +485,7 @@ class SED(Plotter):
                                 np.min(mod_fluxes[mask_uplim]),
                             ),
                         )
-                    elif not mask_ok.any() == False:
+                    elif mask_ok.any():
                         ymin = min(
                             np.min(obs_fluxes[mask_ok]),
                             np.min(mod_fluxes[mask_ok]),
@@ -494,10 +494,10 @@ class SED(Plotter):
                         ymin = ax1.get_ylim()[0]
                     ymin *= 1e-1
 
-                if yrange[1] is not False:
+                if yrange[1]:
                     ymax = yrange[1]
                 else:
-                    if not mask_uplim.any() == False:
+                    if mask_uplim.any():
                         ymax = max(
                             max(
                                 np.max(obs_fluxes[mask_ok]),
@@ -508,7 +508,7 @@ class SED(Plotter):
                                 np.max(mod_fluxes[mask_uplim]),
                             ),
                         )
-                    elif not mask_ok.any() == False:
+                    elif mask_ok.any():
                         ymax = max(
                             np.max(obs_fluxes[mask_ok]),
                             np.max(mod_fluxes[mask_ok]),
