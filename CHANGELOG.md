@@ -10,6 +10,7 @@
 - The masked values in the observation and results are replaced by NaN when plotting in order to suppress a Matplotlib warning. (Médéric Boquien)
 - Numpy floating-point errors have been disabled as they do not provide useful information to the end user while generating output noise. (Médéric Boquien)
 - FITS verification warnings have been disabled as they do not indicate any real issue with the generated FITS tables. (Médéric Boquien)
+- It is now once again possible to compute models using a parameters file. (Médéric Boquien)
 ### Optimised
 
 ## 2022.1 (2022-07-04)

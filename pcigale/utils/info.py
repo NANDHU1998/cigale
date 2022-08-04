@@ -167,7 +167,7 @@ class Info:
 
         if len(self.config["parameters_file"]) == 0:
             return "[warning]None[/warning]"
-        return self.config["parameters_files"]
+        return self.config["parameters_file"]
 
     def _bands(self):
         """Return the formatted list of bands to fit for printing."""
