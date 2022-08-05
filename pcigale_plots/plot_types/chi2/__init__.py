@@ -77,7 +77,7 @@ class Chi2(Plotter):
         )
         ax.minorticks_on()
         figure.suptitle(
-            f"Reduced $\chi^2$ distribution of {var_name} for " f"{obj_name}."
+            f"Reduced $\chi^2$ distribution of {var_name} for {obj_name}."
         )
         figure.savefig(outdir / f"{obj_name}_{var_name}_chi2.{format}")
         plt.close(figure)

@@ -153,7 +153,7 @@ def build_filters():
             tr *= wl
         elif type_ != "energy":
             raise ValueError(
-                "Filter transmission type can only be 'energy' or " "'photon'."
+                "Filter transmission type can only be 'energy' or 'photon'."
             )
 
         print(f"Importing {name}... ({wl.size} points)")
