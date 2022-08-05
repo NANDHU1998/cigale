@@ -1,10 +1,8 @@
 from astropy.table import Table
 import matplotlib
-import sys
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import multiprocessing as mp
 import numpy as np
 import pkg_resources
 from scipy import stats

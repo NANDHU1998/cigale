@@ -3,7 +3,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import multiprocessing as mp
 import numpy as np
 
 from pcigale.utils.io import read_table
