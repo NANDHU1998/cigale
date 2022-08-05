@@ -428,7 +428,7 @@ class Fritz2006(SedModule):
                              agn_power * (self.fritz2006.dust -
                                           self.fritz2006.polar_dust))
         sed.add_contribution('agn.fritz2006_polar_dust', self.fritz2006.wl,
-                             agn_power * (self.fritz2006.polar_dust) )
+                             agn_power * (self.fritz2006.polar_dust))
         sed.add_contribution('agn.fritz2006_disk', self.fritz2006.wl,
                              agn_power * self.fritz2006.disk)
 
