@@ -1,8 +1,8 @@
 import warnings
 
-from astropy.table import Table, Column
-from astropy.utils.exceptions import AstropyUserWarning
 import numpy as np
+from astropy.table import Column, Table
+from astropy.utils.exceptions import AstropyUserWarning
 
 warnings.simplefilter('ignore', AstropyUserWarning)
 

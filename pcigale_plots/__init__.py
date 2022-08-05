@@ -1,4 +1,5 @@
 import os
+
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -8,15 +9,16 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 import argparse
-import sys
 import multiprocessing as mp
+import sys
 from pathlib import Path
 
 from pcigale.session.configuration import Configuration
 from pcigale_plots.plot_types.chi2 import Chi2 as chi2_action
-from pcigale_plots.plot_types.pdf import PDF as pdf_action
-from pcigale_plots.plot_types.sed import SED as sed_action, AVAILABLE_SERIES
 from pcigale_plots.plot_types.mock import Mock as mock_action
+from pcigale_plots.plot_types.pdf import PDF as pdf_action
+from pcigale_plots.plot_types.sed import AVAILABLE_SERIES
+from pcigale_plots.plot_types.sed import SED as sed_action
 
 __version__ = "0.2-alpha"
 

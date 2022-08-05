@@ -1,5 +1,6 @@
-from collections.abc import Iterable
 import itertools
+from collections.abc import Iterable
+
 import numpy as np
 
 from pcigale.utils.io import read_table

@@ -1,6 +1,6 @@
-from importlib import import_module
 import inspect
 import os
+from importlib import import_module
 
 
 def complete_parameters(given_parameters, parameters, hidden):

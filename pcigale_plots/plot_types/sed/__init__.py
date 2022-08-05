@@ -1,19 +1,19 @@
 from itertools import repeat
 
-from astropy.table import Table, vstack
 import matplotlib
+from astropy.table import Table, vstack
 
 matplotlib.use("Agg")
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 from scipy.constants import c
-from pcigale.data import SimpleDatabase as Database
-from pcigale.utils.io import read_table
-import matplotlib.gridspec as gridspec
-from pcigale.utils.counter import Counter
 
-from pcigale.utils.console import console, INFO, WARNING, ERROR
+from pcigale.data import SimpleDatabase as Database
+from pcigale.utils.console import ERROR, INFO, WARNING, console
+from pcigale.utils.counter import Counter
+from pcigale.utils.io import read_table
 from pcigale_plots.plot_types import Plotter
 
 # Name of the file containing the best models information

@@ -8,11 +8,12 @@ results of the analysis with different blocks of models.
 import ctypes
 from pathlib import Path
 
-from astropy.table import Table, Column
-from astropy.units import Unit, LogUnit
 import numpy as np
+from astropy.table import Column, Table
+from astropy.units import LogUnit, Unit
 
-from pcigale.utils.console import console, INFO, ERROR
+from pcigale.utils.console import ERROR, INFO, console
+
 from .utils import SharedArray
 
 

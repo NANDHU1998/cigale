@@ -1,8 +1,8 @@
 """This is the database where we store some data used by pcigale."""
 
-from pathlib import Path
 import pickle
 import traceback
+from pathlib import Path
 
 import pkg_resources
 

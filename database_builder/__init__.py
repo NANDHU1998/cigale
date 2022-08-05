@@ -5,9 +5,9 @@ import itertools
 from pathlib import Path
 
 import numpy as np
-from scipy import interpolate
 import scipy.constants as cst
 from astropy.table import Table
+from scipy import interpolate
 
 from pcigale.data import SimpleDatabase
 

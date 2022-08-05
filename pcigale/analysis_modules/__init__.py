@@ -1,9 +1,9 @@
+import shutil
 from datetime import datetime
 from importlib import import_module
 from pathlib import Path
-import shutil
 
-from pcigale.utils.console import console, INFO
+from pcigale.utils.console import INFO, console
 
 
 class AnalysisModule:

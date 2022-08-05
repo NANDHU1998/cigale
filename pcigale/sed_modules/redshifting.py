@@ -15,8 +15,8 @@ is changed, this module may need to be adapted.
 
 import numpy as np
 from scipy.special import factorial
-from ..utils.cosmology import age, luminosity_distance
 
+from ..utils.cosmology import age, luminosity_distance
 from . import SedModule
 
 __category__ = "redshifting"

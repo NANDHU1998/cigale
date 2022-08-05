@@ -7,13 +7,14 @@ This module implements the Fritz et al. (2006) models.
 """
 from functools import lru_cache
 
-from astropy.table import Table
 import numpy as np
 import pkg_resources
 import scipy.constants as cst
+from astropy.table import Table
 from scipy.interpolate import interp1d
 
 from pcigale.data import SimpleDatabase as Database
+
 from . import SedModule
 
 __category__ = "AGN"

@@ -3,8 +3,8 @@ Various utility function for pcigale
 """
 from functools import lru_cache
 
-from astropy.table import Table
 from astropy.io.ascii.core import InconsistentTableError
+from astropy.table import Table
 
 
 @lru_cache

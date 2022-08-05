@@ -21,19 +21,20 @@ import multiprocessing as mp
 
 import numpy as np
 
-from .. import AnalysisModule
+from pcigale.utils.console import INFO, console
 from pcigale.utils.counter import Counter
-from .workers import sed as worker_sed
-from .workers import init_sed as init_worker_sed
-from .workers import init_analysis as init_worker_analysis
-from .workers import init_bestfit as init_worker_bestfit
-from .workers import analysis as worker_analysis
-from .workers import bestfit as worker_bestfit
-from ...managers.results import ResultsManager
+
 from ...managers.models import ModelsManager
 from ...managers.observations import ObservationsManager
 from ...managers.parameters import ParametersManager
-from pcigale.utils.console import console, INFO
+from ...managers.results import ResultsManager
+from .. import AnalysisModule
+from .workers import analysis as worker_analysis
+from .workers import bestfit as worker_bestfit
+from .workers import init_analysis as init_worker_analysis
+from .workers import init_bestfit as init_worker_bestfit
+from .workers import init_sed as init_worker_sed
+from .workers import sed as worker_sed
 
 
 class PdfAnalysis(AnalysisModule):

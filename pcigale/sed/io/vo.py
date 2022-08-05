@@ -1,5 +1,5 @@
-from astropy.io.votable.tree import VOTableFile, Resource, Table, Field, Info
 import numpy as np
+from astropy.io.votable.tree import Field, Info, Resource, Table, VOTableFile
 
 
 def save_sed_to_vo(sed, filename, norm=1.):

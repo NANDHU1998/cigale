@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 import multiprocessing as mp
+from abc import ABC, abstractmethod
 
 
 class Plotter(ABC):

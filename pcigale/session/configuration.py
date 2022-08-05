@@ -1,21 +1,21 @@
 import multiprocessing as mp
-from pathlib import Path
 import sys
+from glob import glob  # To allow the use of glob() in "eval..."
+from pathlib import Path
 from textwrap import wrap
 
 import configobj
-from glob import glob  # To allow the use of glob() in "eval..."
 import numpy as np
 import validate
 
-from ..managers.parameters import ParametersManager
-from ..data import SimpleDatabase as Database
+from pcigale.utils.console import ERROR, INFO, console
 from pcigale.utils.io import read_table
-from .. import sed_modules
-from .. import analysis_modules
+
+from .. import analysis_modules, sed_modules
+from ..data import SimpleDatabase as Database
+from ..managers.parameters import ParametersManager
 from ..warehouse import SedWarehouse
 from . import validation
-from pcigale.utils.console import console, INFO, ERROR
 
 
 class Configuration:

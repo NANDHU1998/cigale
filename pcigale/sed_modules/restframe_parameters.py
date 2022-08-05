@@ -17,8 +17,8 @@ from itertools import chain
 import numpy as np
 from scipy.constants import c, parsec
 
-from . import SedModule
 from ..sed.utils import flux_trapz
+from . import SedModule
 
 __category__ = "restframe_parameters"
 

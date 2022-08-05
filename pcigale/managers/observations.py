@@ -1,13 +1,14 @@
-from astropy.table import Column
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+from astropy.table import Column
 from scipy.constants import parsec
 
+from pcigale.utils.console import WARNING, console
 from pcigale.utils.cosmology import luminosity_distance
 from pcigale.utils.io import read_table
-from .utils import get_info
 
-from pcigale.utils.console import console, WARNING
+from .utils import get_info
 
 
 class ObservationsManager:

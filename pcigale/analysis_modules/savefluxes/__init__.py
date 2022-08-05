@@ -12,14 +12,15 @@ The data file is used only to get the list of fluxes to be computed.
 
 import multiprocessing as mp
 
-from .. import AnalysisModule
+from pcigale.utils.console import INFO, console
 from pcigale.utils.counter import Counter
-from .workers import init_fluxes as init_worker_fluxes
-from .workers import fluxes as worker_fluxes
+
 from ...managers.models import ModelsManager
 from ...managers.observations import ObservationsManager
 from ...managers.parameters import ParametersManager
-from pcigale.utils.console import console, INFO
+from .. import AnalysisModule
+from .workers import fluxes as worker_fluxes
+from .workers import init_fluxes as init_worker_fluxes
 
 
 class SaveFluxes(AnalysisModule):

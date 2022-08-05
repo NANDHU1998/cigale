@@ -9,8 +9,8 @@ Populations.
 
 import numpy as np
 
-from . import SedModule
 from ..data import SimpleDatabase as Database
+from . import SedModule
 
 __category__ = "SSP"
 

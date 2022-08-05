@@ -9,6 +9,7 @@ This module implements the Draine and Li (2007) infra-red models.
 import numpy as np
 
 from pcigale.data import SimpleDatabase as Database
+
 from . import SedModule
 
 __category__ = "dust emission"

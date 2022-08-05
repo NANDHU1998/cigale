@@ -1,11 +1,12 @@
 from functools import lru_cache
 from pathlib import Path
 
-from astropy import log
-from ...utils.cosmology import luminosity_distance
 import numpy as np
+from astropy import log
 from scipy import optimize
 from scipy.special import erf
+
+from ...utils.cosmology import luminosity_distance
 
 log.setLevel("ERROR")
 

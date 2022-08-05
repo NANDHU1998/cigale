@@ -1,13 +1,14 @@
 from itertools import product
+
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pcigale.utils.io import read_table
-from pcigale.utils.console import console, INFO, WARNING
+from pcigale.utils.console import INFO, WARNING, console
 from pcigale.utils.counter import Counter
+from pcigale.utils.io import read_table
 from pcigale_plots.plot_types import Plotter
 
 

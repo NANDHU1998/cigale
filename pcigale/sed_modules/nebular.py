@@ -2,6 +2,7 @@ import numpy as np
 import scipy.constants as cst
 
 from pcigale.data import SimpleDatabase as Database
+
 from . import SedModule
 
 __category__ = "nebular"

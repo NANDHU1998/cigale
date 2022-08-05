@@ -7,6 +7,7 @@ This module implements the Dale (2014) infra-red models.
 """
 
 from pcigale.data import SimpleDatabase as Database
+
 from . import SedModule
 
 __category__ = "dust emission"

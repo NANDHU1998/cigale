@@ -1,5 +1,5 @@
-from astropy.table import Table
 import matplotlib
+from astropy.table import Table
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ import numpy as np
 import pkg_resources
 from scipy import stats
 
-from pcigale.utils.console import console, INFO
+from pcigale.utils.console import INFO, console
 from pcigale.utils.counter import Counter
 from pcigale_plots.plot_types import Plotter
 

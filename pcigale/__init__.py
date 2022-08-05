@@ -11,18 +11,18 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 import argparse
 import datetime as dt
 import multiprocessing as mp
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 
-from .session.configuration import Configuration
-from .analysis_modules import get_module
+from pcigale.utils.console import INFO, console
 from pcigale.utils.info import Info
-from pcigale.utils.console import console, INFO
-
 from pcigale.version import __version__
+
+from .analysis_modules import get_module
+from .session.configuration import Configuration
 
 # Suppress floating-point errors as they do not provide useful information to
 # end users while generating output noise
