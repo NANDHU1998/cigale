@@ -1,6 +1,6 @@
-from ..sed import SED
-from .. import sed_modules
-from .sedcache import SedCache
+from pcigale import sed_modules
+from pcigale.sed import SED
+from pcigale.warehouse.sedcache import SedCache
 
 
 class SedWarehouse:

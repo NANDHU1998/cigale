@@ -9,7 +9,7 @@ This module implements the X-ray emission from the galaxy and AGN corona.
 import numpy as np
 import scipy.constants as cst
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "X-ray"
 

@@ -9,8 +9,7 @@ This module implements the Schreiber et al. (2016) infra-red models.
 import numpy as np
 
 from pcigale.data import SimpleDatabase as Database
-
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "dust emission"
 

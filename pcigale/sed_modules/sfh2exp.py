@@ -9,7 +9,7 @@ decreasing exponentials.
 
 import numpy as np
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "SFH"
 

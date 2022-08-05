@@ -8,14 +8,13 @@ import configobj
 import numpy as np
 import validate
 
+from pcigale import analysis_modules, sed_modules
+from pcigale.data import SimpleDatabase as Database
+from pcigale.managers.parameters import ParametersManager
+from pcigale.session import validation
 from pcigale.utils.console import ERROR, INFO, console
 from pcigale.utils.io import read_table
-
-from .. import analysis_modules, sed_modules
-from ..data import SimpleDatabase as Database
-from ..managers.parameters import ParametersManager
-from ..warehouse import SedWarehouse
-from . import validation
+from pcigale.warehouse import SedWarehouse
 
 
 class Configuration:

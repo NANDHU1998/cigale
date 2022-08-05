@@ -9,8 +9,8 @@ Populations.
 
 import numpy as np
 
-from ..data import SimpleDatabase as Database
-from . import SedModule
+from pcigale.data import SimpleDatabase as Database
+from pcigale.sed_modules import SedModule
 
 __category__ = "SSP"
 

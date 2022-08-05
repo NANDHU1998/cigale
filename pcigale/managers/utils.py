@@ -7,7 +7,7 @@ from multiprocessing.sharedctypes import RawArray
 
 import numpy as np
 
-from ..warehouse import SedWarehouse
+from pcigale.warehouse import SedWarehouse
 
 
 def get_info(cls):

@@ -6,7 +6,7 @@ from astropy import log
 from scipy import optimize
 from scipy.special import erf
 
-from ...utils.cosmology import luminosity_distance
+from pcigale.utils.cosmology import luminosity_distance
 
 log.setLevel("ERROR")
 

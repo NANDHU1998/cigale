@@ -12,8 +12,7 @@ This module implements the Jones et al (2017) infrared models.
 import numpy as np
 
 from pcigale.data import SimpleDatabase as Database
-
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "dust emission"
 

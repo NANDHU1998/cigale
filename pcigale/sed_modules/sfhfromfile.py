@@ -8,9 +8,8 @@ This module reads the star formation history in a file.
 
 import numpy as np
 
+from pcigale.sed_modules import SedModule
 from pcigale.utils.io import read_table
-
-from . import SedModule
 
 __category__ = "SFH"
 

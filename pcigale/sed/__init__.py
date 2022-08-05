@@ -23,10 +23,10 @@ import numpy as np
 from numpy.core.multiarray import interp  # Compiled version
 from scipy.constants import parsec
 
-from ..data import SimpleDatabase as Database
-from . import utils
-from .io.fits import save_sed_to_fits
-from .io.vo import save_sed_to_vo
+from pcigale.data import SimpleDatabase as Database
+from pcigale.sed import utils
+from pcigale.sed.io.fits import save_sed_to_fits
+from pcigale.sed.io.vo import save_sed_to_vo
 
 
 class SED:

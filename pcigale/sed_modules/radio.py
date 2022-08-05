@@ -10,7 +10,7 @@ FIR/radio correlation and the power law of the synchrotron spectrum.
 import numpy as np
 import scipy.constants as cst
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "radio"
 

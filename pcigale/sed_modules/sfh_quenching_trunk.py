@@ -10,7 +10,7 @@ constant.
 
 import numpy as np
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 
 class SfhQuenchTrunk(SedModule):

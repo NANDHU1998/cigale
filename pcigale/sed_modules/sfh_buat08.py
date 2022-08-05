@@ -20,7 +20,7 @@ to 40 km/s as well as some intermediate values.
 
 import numpy as np
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "SFH"
 

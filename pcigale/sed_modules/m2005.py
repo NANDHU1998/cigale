@@ -9,8 +9,8 @@ This module implements the Maraston (2005) Single Stellar Populations.
 import numpy as np
 import scipy.constants as cst
 
-from ..data import SimpleDatabase as Database
-from . import SedModule
+from pcigale.data import SimpleDatabase as Database
+from pcigale.sed_modules import SedModule
 
 __category__ = "SSP"
 

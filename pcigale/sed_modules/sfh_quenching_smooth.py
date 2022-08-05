@@ -10,7 +10,7 @@ given age, the Star Formation Rate becomes linear to be multiplied by
 
 import numpy as np
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 
 class SfhQuenchSmooth(SedModule):

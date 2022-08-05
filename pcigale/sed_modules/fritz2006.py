@@ -14,8 +14,7 @@ from astropy.table import Table
 from scipy.interpolate import interp1d
 
 from pcigale.data import SimpleDatabase as Database
-
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "AGN"
 

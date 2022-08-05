@@ -9,7 +9,7 @@ attenuation formulae, adding an UV-bump and a power law.
 
 import numpy as np
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "dust attenuation"
 

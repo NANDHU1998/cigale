@@ -12,9 +12,8 @@ import numpy as np
 from astropy.table import Column, Table
 from astropy.units import LogUnit, Unit
 
+from pcigale.managers.utils import SharedArray
 from pcigale.utils.console import ERROR, INFO, console
-
-from .utils import SharedArray
 
 
 class BayesResultsManager:

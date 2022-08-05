@@ -8,7 +8,7 @@ from pcigale.utils.console import WARNING, console
 from pcigale.utils.cosmology import luminosity_distance
 from pcigale.utils.io import read_table
 
-from .utils import get_info
+from pcigale.managers.utils import get_info
 
 
 class ObservationsManager:

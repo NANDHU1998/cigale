@@ -9,7 +9,7 @@ This module implements the Casey (2012) infra-red models.
 import numpy as np
 import scipy.constants as cst
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
 
 __category__ = "dust emission"
 

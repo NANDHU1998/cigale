@@ -17,12 +17,11 @@ from pathlib import Path
 
 import numpy as np
 
+from pcigale.analysis_modules import get_module
+from pcigale.session.configuration import Configuration
 from pcigale.utils.console import INFO, console
 from pcigale.utils.info import Info
 from pcigale.version import __version__
-
-from .analysis_modules import get_module
-from .session.configuration import Configuration
 
 # Suppress floating-point errors as they do not provide useful information to
 # end users while generating output noise

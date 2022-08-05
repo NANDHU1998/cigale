@@ -3,8 +3,11 @@ from pathlib import Path
 
 import numpy as np
 
-from ...warehouse import SedWarehouse
-from .utils import compute_chi2, compute_corr_dz, save_chi2, weighted_param
+from pcigale.analysis_modules.pdf_analysis.utils import (compute_chi2,
+                                                         compute_corr_dz,
+                                                         save_chi2,
+                                                         weighted_param)
+from pcigale.warehouse import SedWarehouse
 
 
 def init_sed(models, counter):
