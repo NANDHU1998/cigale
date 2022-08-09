@@ -24,7 +24,7 @@ class PDF(Plotter):
         if "all" in save_chi2 or "fluxes" in save_chi2:
             pdf_vars += self.configuration["analysis_params"]["bands"]
 
-        input_data = read_table(outdir.parent / self.configuration["data_file"])
+        input_data = read_table(outdir / OBSERVATIONS)
         items = list(product(input_data["id"], pdf_vars, [format], [outdir]))
         counter = Counter(len(items), 1, "PDF")
 

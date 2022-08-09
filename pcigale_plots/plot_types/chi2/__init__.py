@@ -11,13 +11,13 @@ from pcigale.utils.counter import Counter
 from pcigale.utils.io import read_table
 from pcigale_plots.plot_types import Plotter
 
+OBSERVATIONS = "observations.fits"
 
 class Chi2(Plotter):
     def __init__(self, config, format, outdir):
         """Plot the χ² values of analysed variables."""
         self.configuration = config.configuration
-        file = outdir.parent / self.configuration["data_file"]
-        input_data = read_table(file)
+        input_data = read_table(outdir / OBSERVATIONS)
         save_chi2 = self.configuration["analysis_params"]["save_chi2"]
 
         chi2_vars = []

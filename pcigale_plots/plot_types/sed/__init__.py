@@ -19,6 +19,7 @@ from pcigale_plots.plot_types import Plotter
 # Name of the file containing the best models information
 BEST_RESULTS = "results.fits"
 MOCK_RESULTS = "results_mock.fits"
+OBSERVATIONS = "observations.fits"
 
 AVAILABLE_SERIES = [
     "stellar_attenuated",
@@ -36,9 +37,9 @@ class SED(Plotter):
         self, config, sed_type, nologo, xrange, yrange, series, format, outdir
     ):
         """Plot the best SED with associated observed and modelled fluxes."""
-        self.configuration = config.configuration
+        self.configuration = config.config
         if self.configuration["data_file"]:
-            obs = read_table(outdir.parent / self.configuration["data_file"])
+            obs = Table.read(outdir / OBSERVATIONS)
             mod = Table.read(outdir / BEST_RESULTS)
 
             # Replace masked values by NaN to suppress warnings
