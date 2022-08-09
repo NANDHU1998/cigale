@@ -402,7 +402,7 @@ class Configuration:
 
         # Lines used in the fitted bands.
         line_list = {
-            name[5:]
+            name
             for name in self.config["bands"]
             if name.startswith("line.") and not name.endswith("_err")
         }
@@ -411,11 +411,14 @@ class Configuration:
         if self.config["analysis_method"] == "pdf_analysis":
             line_list.update(
                 {
-                    name[5:]
+                    name
                     for name in self.config["analysis_params"]["bands"]
                     if name.startswith("line.")
                 }
             )
+
+        # Flatten the set for line combinations and remove the line. prefix
+        line_list = {ls[5:] for line in line_list for ls in line.split("+")}
 
         self.config["sed_modules_params"]["nebular"]["line_list"] = " & ".join(
             line_list
