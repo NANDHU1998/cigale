@@ -43,7 +43,7 @@ class Configuration:
             )
         else:
             self.spec = configobj.ConfigObj(
-                filename.with_suffix(".ini.spec").name,
+                str(filename.with_suffix(".ini.spec")),
                 write_empty_values=True,
                 indent_type="  ",
                 encoding="UTF8",
@@ -51,7 +51,7 @@ class Configuration:
                 _inspec=True,
             )
             self.config = configobj.ConfigObj(
-                filename.name,
+                str(filename),
                 write_empty_values=True,
                 indent_type="  ",
                 encoding="UTF8",
