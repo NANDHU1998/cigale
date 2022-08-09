@@ -409,13 +409,11 @@ class Configuration:
 
         # Lines estimated in the pdf_analysis module.
         if self.config["analysis_method"] == "pdf_analysis":
-            line_list.update(
-                {
-                    name
-                    for name in self.config["analysis_params"]["bands"]
-                    if name.startswith("line.")
-                }
-            )
+            line_list |= {
+                name
+                for name in self.config["analysis_params"]["bands"]
+                if name.startswith("line.")
+            }
 
         # Flatten the set for line combinations and remove the line. prefix
         line_list = {ls[5:] for line in line_list for ls in line.split("+")}
