@@ -262,8 +262,8 @@ class SED:
 
         if filter_name.startswith('line.'):
             lum = 0
-            for name in filter_name.split('+'):
-                line = self.lines[name.split('.', maxsplit=1)[1]]
+            for name in filter_name[5:].split('+'):
+                line = self.lines[name]
                 lum += line[1] + line[2]  # Young and old components
             return utils.luminosity_to_flux(lum, dist)
 

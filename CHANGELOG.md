@@ -6,6 +6,7 @@
 - It is now possible to plot models computed with the `savefluxes` module with `pcigale-plot sed`. (Médéric Boquien)
 ### Changed
 - Any known line can now be used for fitting or for estimating the flux probability distribution without modifying the nebular module source. (Yannick Roehlly & Médéric Boquien)
+- To combine several lines it was before necessary to prefix each line with `line`, for instance `line.NII-654.8+line.NII-658.3`. Now a single `line` prefix is needed, for instance `line.NII-654.8+NII-658.3`. (Médéric Boquien, idea from Véronique Buat)
 ### Fixed
 - The masked values in the observation and results are replaced by NaN when plotting in order to suppress a Matplotlib warning. (Médéric Boquien)
 - Numpy floating-point errors have been disabled as they do not provide useful information to the end user while generating output noise. (Médéric Boquien)
