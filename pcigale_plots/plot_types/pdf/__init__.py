@@ -11,6 +11,8 @@ from pcigale.utils.counter import Counter
 from pcigale.utils.io import read_table
 from pcigale_plots.plot_types import Plotter
 
+OBSERVATIONS = "observations.fits"
+
 
 class PDF(Plotter):
     def __init__(self, config, format, outdir):
