@@ -32,7 +32,7 @@ class Mock(Plotter):
         except FileNotFoundError:
             raise Exception(f"Mock models file {mock_results_file} not found.")
 
-        self.configuration = config.configuration
+        self.configuration = config.config
         params = self.configuration["analysis_params"]["variables"]
 
         for param in params:

@@ -17,7 +17,7 @@ OBSERVATIONS = "observations.fits"
 class PDF(Plotter):
     def __init__(self, config, format, outdir):
         """Plot the PDF of analysed variables."""
-        self.configuration = config.configuration
+        self.configuration = config.config
         save_chi2 = self.configuration["analysis_params"]["save_chi2"]
 
         pdf_vars = []

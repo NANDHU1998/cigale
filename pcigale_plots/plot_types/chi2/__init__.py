@@ -16,7 +16,7 @@ OBSERVATIONS = "observations.fits"
 class Chi2(Plotter):
     def __init__(self, config, format, outdir):
         """Plot the χ² values of analysed variables."""
-        self.configuration = config.configuration
+        self.configuration = config.config
         input_data = read_table(outdir / OBSERVATIONS)
         save_chi2 = self.configuration["analysis_params"]["save_chi2"]
 
