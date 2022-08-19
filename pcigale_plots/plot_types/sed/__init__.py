@@ -156,9 +156,17 @@ class SED(Plotter):
             )
             wavelength_spec = sed["wavelength"] * 1e-3
             if observed:
-                obs_fluxes = np.array([obs[filt] for filt in filters.keys()])
+                obs_fluxes = np.array(
+                    [
+                        obs[filt] if filt in obs.colnames else np.nan
+                        for filt in filters.keys()
+                    ]
+                )
                 obs_fluxes_err = np.array(
-                    [obs[filt + "_err"] for filt in filters.keys()]
+                    [
+                        obs[f"{filt}_err"] if f"{filt}_err" in obs.colnames else np.nan
+                        for filt in filters.keys()
+                    ]
                 )
                 mod_fluxes = np.array(
                     [
