@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 This class represents a Spectral Energy Distribution (SED) as used by pcigale.
 Such SED is characterised by:
@@ -14,13 +9,8 @@ Such SED is characterised by:
 
 - wavelength_grid: the grid of wavelengths [nm] used for the luminosities.
 
-- contribution_names: the list of the names of the luminosity contributions
-  making part of the SED.
-
-- luminosities: a two axis numpy array containing all the luminosity density
-  [W/nm] contributions to the SED. The index in the first axis corresponds to
-  the contribution (in the contribution_names list) and the index of the
-  second axis corresponds to the wavelength in the wavelength grid.
+- luminosities: a dictionary containing arrays of all the luminosity density
+  [W/nm] contributions to the SED.
 
 - info: a dictionary containing various information about the SED.
 
@@ -30,16 +20,16 @@ Such SED is characterised by:
 """
 
 import numpy as np
-from numpy.core.multiarray import interp # Compiled version
+from numpy.core.multiarray import interp  # Compiled version
 from scipy.constants import parsec
 
-from . import utils
-from .io.vo import save_sed_to_vo
-from .io.fits import save_sed_to_fits
-from ..data import Database
+from pcigale.data import SimpleDatabase as Database
+from pcigale.sed import utils
+from pcigale.sed.io.fits import save_sed_to_fits
+from pcigale.sed.io.vo import save_sed_to_vo
 
 
-class SED(object):
+class SED:
     """Spectral Energy Distribution with associated information
     """
 
@@ -61,7 +51,6 @@ class SED(object):
         self.sfh = sfh
         self.modules = []
         self.wavelength_grid = None
-        self.contribution_names = []
         self.luminosity = None
         self.luminosities = None
         self.lines = dict()
@@ -75,8 +64,8 @@ class SED(object):
         """
         if self._sfh is None:
             return None
-        else:
-            return np.copy(self._sfh)
+
+        return np.copy(self._sfh)
 
     @sfh.setter
     def sfh(self, value):
@@ -195,49 +184,34 @@ class SED(object):
             The vector of the Lλ luminosities (in W/nm) of the module results.
 
         """
-        self.contribution_names.append(contribution_name)
-
         # If the SED luminosity table is empty, then there is nothing to
         # compute.
         if self.luminosity is None:
-            self.wavelength_grid = results_wavelengths.copy()
+            self.wavelength_grid = results_wavelengths
+            self.luminosities = {contribution_name: results_lumin}
+            # Make a copy so that changing the luminosity does not affect the
+            # component
             self.luminosity = results_lumin.copy()
-            self.luminosities = results_lumin.copy()
         else:
             # If the added luminosity contribution changes the SED wavelength
             # grid, we interpolate everything on a common wavelength grid.
             if (results_wavelengths.size != self.wavelength_grid.size or
-                    not np.all(results_wavelengths == self.wavelength_grid)):
+                    (np.count_nonzero(results_wavelengths != self.wavelength_grid) > 0)):
                 # Interpolate each luminosity component to the new wavelength
                 # grid setting everything outside the wavelength domain to 0.
                 self.wavelength_grid, self.luminosities = \
                     utils.interpolate_lumin(self.wavelength_grid,
                                             self.luminosities,
                                             results_wavelengths,
-                                            results_lumin)
+                                            results_lumin,
+                                            contribution_name)
 
-                self.luminosity = self.luminosities.sum(0)
+                self.luminosity = np.sum(list(self.luminosities.values()),
+                                         axis=0)
             else:
-                self.luminosities = np.vstack((self.luminosities,
-                                               results_lumin))
+
+                self.luminosities[contribution_name] = results_lumin
                 self.luminosity += results_lumin
-
-    def get_lumin_contribution(self, name):
-        """Get the luminosity vector of a given contribution
-
-        Parameters
-        ----------
-        name: string
-            Name of the contribution
-
-        Returns
-        -------
-        luminosities: array of floats
-            Vector of the luminosity density contribution based on the SED
-            wavelength grid.
-
-        """
-        return self.luminosities[self.contribution_names.index(name)]
 
     def compute_fnu(self, filter_name):
         """
@@ -288,26 +262,27 @@ class SED(object):
 
         if filter_name.startswith('line.'):
             lum = 0
-            for name in filter_name.split('+'):
-                line = self.lines[name.split('.', maxsplit=1)[1]]
+            for name in filter_name[5:].split('+'):
+                line = self.lines[name]
                 lum += line[1] + line[2]  # Young and old components
             return utils.luminosity_to_flux(lum, dist)
 
         if key in self.cache_filters:
             wavelength_r, transmission_r, lambda_piv = self.cache_filters[key]
         else:
-            with Database() as db:
-                filter_ = db.get_filter(filter_name)
-            trans_table = filter_.trans_table
-            lambda_piv = filter_.pivot_wavelength
-            lambda_min = trans_table[0][0]
-            lambda_max = trans_table[0][-1]
+            with Database("filters") as db:
+                filter_ = db.get(name=filter_name)
+            wl = filter_.wl
+            tr = filter_.tr
+            lambda_piv = filter_.pivot
+            lambda_min = wl[0]
+            lambda_max = wl[-1]
             if filter_name.startswith('linefilter.'):
                 if 'universe.redshift' in self.info:
                     zp1 = 1. + self.info['universe.redshift']
                 else:
                     zp1 = 1.
-                trans_table[0] *= zp1
+                wl *= zp1
                 lambda_piv *= zp1
                 lambda_min *= zp1
                 lambda_max *= zp1
@@ -323,9 +298,8 @@ class SED(object):
             # filter one.
             w = np.where((wavelength >= lambda_min) &
                          (wavelength <= lambda_max))
-            wavelength_r = utils.best_grid(wavelength[w], trans_table[0], key)
-            transmission_r = interp(wavelength_r, trans_table[0],
-                                    trans_table[1])
+            wavelength_r = utils.best_grid(wavelength[w], wl, key)
+            transmission_r = interp(wavelength_r, wl, tr)
 
             self.cache_filters[key] = (wavelength_r, transmission_r,
                                        lambda_piv)
@@ -387,8 +361,10 @@ class SED(object):
         if self.wavelength_grid is not None:
             sed.wavelength_grid = self.wavelength_grid.copy()
             sed.luminosity = self.luminosity.copy()
+            # Copy only the dictionary but not the content. Individual
+            # components are considered immutable.
             sed.luminosities = self.luminosities.copy()
-        sed.contribution_names = self.contribution_names[:]
+
         sed.lines = self.lines.copy()
         sed.info = self.info.copy()
         sed.unit = self.unit  # No need to copy, the units will not change

@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 Save fluxes analysis module
 ===========================
@@ -15,16 +10,17 @@ The data file is used only to get the list of fluxes to be computed.
 
 """
 
-from collections import OrderedDict
 import multiprocessing as mp
 
-from .. import AnalysisModule
-from utils.counter import Counter
-from .workers import init_fluxes as init_worker_fluxes
-from .workers import fluxes as worker_fluxes
-from ...managers.models import ModelsManager
-from ...managers.observations import ObservationsManager
-from ...managers.parameters import ParametersManager
+from pcigale.analysis_modules import AnalysisModule
+from pcigale.analysis_modules.savefluxes.workers import fluxes as worker_fluxes
+from pcigale.analysis_modules.savefluxes.workers import \
+    init_fluxes as init_worker_fluxes
+from pcigale.managers.models import ModelsManager
+from pcigale.managers.observations import ObservationsManager
+from pcigale.managers.parameters import ParametersManager
+from pcigale.utils.console import INFO, console
+from pcigale.utils.counter import Counter
 
 
 class SaveFluxes(AnalysisModule):
@@ -35,27 +31,27 @@ class SaveFluxes(AnalysisModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("variables", (
+    parameters = {
+        "variables": (
             "cigale_string_list()",
             "List of the physical properties to save. Leave empty to save all "
             "the physical properties (not recommended when there are many "
             "models).",
             None
-        )),
-        ("save_sed", (
+        ),
+        "save_sed": (
             "boolean()",
             "If True, save the generated spectrum for each model.",
             False
-        )),
-        ("blocks", (
+        ),
+        "blocks": (
             "integer(min=1)",
             "Number of blocks to compute the models. Having a number of blocks"
             " larger than 1 can be useful when computing a very large number "
             "of models or to split the result file into smaller files.",
             1
-        ))
-    ])
+        )
+    }
 
     @staticmethod
     def _parallel_job(worker, items, initargs, initializer, ncores):
@@ -64,29 +60,41 @@ class SaveFluxes(AnalysisModule):
             for idx, item in enumerate(items):
                 worker(idx, item)
         else:  # run in parallel
+            # Temporarily remove the counter sub-process that updates the
+            # progress bar as it cannot be pickled when creating the parallel
+            # processes when using the "spawn" starting method.
+            for arg in initargs:
+                if isinstance(arg, Counter):
+                    counter = arg
+                    progress = counter.progress
+                    counter.progress = None
+
             with mp.Pool(processes=ncores, initializer=initializer,
                          initargs=initargs) as pool:
                 pool.starmap(worker, enumerate(items))
 
+            # After the parallel processes have exited, it can be restored
+            counter.progress = progress
+
     def _compute_models(self, conf, obs, params):
         nblocks = len(params.blocks)
         for iblock in range(nblocks):
-            print(f"Computing models for block {iblock + 1}/{nblocks}...")
+            console.rule(f"Block {iblock + 1}/{nblocks}")
+            console.print(f"{INFO} Starting the computation of the models.")
 
             models = ModelsManager(conf, obs, params, iblock)
-            counter = Counter(len(params.blocks[iblock]), 50, 250)
+            counter = Counter(len(params.blocks[iblock]), 50, "Model")
 
             initargs = (models, counter)
             self._parallel_job(worker_fluxes, params.blocks[iblock], initargs,
                                init_worker_fluxes, conf['cores'])
 
             # Print the final value as it may not otherwise be printed
-            if counter.global_counter.value % 250 != 0:
-                counter.pprint(len(params.blocks[iblock]))
-
-            print("Saving the models ....")
+            counter.global_counter.value = len(params.blocks[iblock])
+            counter.progress.join()
+            console.print(f"{INFO} Done.")
+            console.print(f"{INFO} Saving the models.")
             models.save(f"models-block-{iblock}")
-
 
     def process(self, conf):
         """Process with the savedfluxes analysis.
@@ -116,6 +124,8 @@ class SaveFluxes(AnalysisModule):
         params = ParametersManager(conf)
 
         self._compute_models(conf, observations, params)
+
+        console.print(f"{INFO} Run completed! :thumbs_up:")
 
 
 # AnalysisModule to be returned by get_module

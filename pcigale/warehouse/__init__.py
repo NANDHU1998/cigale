@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
-from ..sed import SED
-from .. import sed_modules
-from .sedcache import SedCache
+from pcigale import sed_modules
+from pcigale.sed import SED
+from pcigale.warehouse.sedcache import SedCache
 
 
-class SedWarehouse(object):
+class SedWarehouse:
     """Create, cache and store SED
 
     This object is responsible for creating SED and storing them in a memory
@@ -27,9 +22,9 @@ class SedWarehouse(object):
         """
         if nocache is None:
             self.nocache = []
-        elif isinstance(nocache, list) is True:
+        elif isinstance(nocache, list):
             self.nocache = nocache
-        elif isinstance(nocache, str) is True:
+        elif isinstance(nocache, str):
             self.nocache = [nocache]
         else:
             raise TypeError("The nocache argument must be a list or an str.")
@@ -99,10 +94,11 @@ class SedWarehouse(object):
 
         sed = self.sed_cache[key]
         if sed is None:
-            mod = self.get_module_cached(module_list.pop(),
-                                         **parameter_list.pop())
+            mod = self.get_module_cached(
+                module_list.pop(), **parameter_list.pop()
+            )
 
-            if (len(module_list) == 0):
+            if len(module_list) == 0:
                 sed = SED()
             else:
                 sed = self.get_sed(module_list, parameter_list).copy()

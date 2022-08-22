@@ -2,15 +2,79 @@
 
 ## Unreleased
 ### Added
+- The `pcigale-filters list` command now also provides the list of nebular emission lines. (Médéric Boquien)
+- It is now possible to plot models computed with the `savefluxes` module with `pcigale-plot sed`. (Médéric Boquien)
+### Changed
+- Any known line can now be used for fitting or for estimating the flux probability distribution without modifying the nebular module source. (Yannick Roehlly & Médéric Boquien)
+- To combine several lines it was before necessary to prefix each line with `line`, for instance `line.NII-654.8+line.NII-658.3`. Now a single `line` prefix is needed, for instance `line.NII-654.8+NII-658.3`. (Médéric Boquien, idea from Yannick Roehlly & Véronique Buat)
+### Fixed
+- The masked values in the observation and results are replaced by NaN when plotting in order to suppress a Matplotlib warning. (Médéric Boquien)
+- Numpy floating-point errors have been disabled as they do not provide useful information to the end user while generating output noise. (Médéric Boquien)
+- FITS verification warnings have been disabled as they do not indicate any real issue with the generated FITS tables. (Médéric Boquien)
+- It is now once again possible to compute models using a parameters file. (Médéric Boquien)
+- The `--outdir` option was broken due to a workaround that was applied to preserve the compatibility with older ConfigObj versions and the way the input data file was handled. It is now more robust. (Médéric Boquien, reported by Marjorie Decleir)
+### Optimised
+
+## 2022.1 (2022-07-04)
+### Added
+- By default CIGALE adds 10% of the flux in quadrature to the uncertainties to represent sources of uncertainty that are not included by default in the photometric error bars. Changing this value required manually changing a source file. Now this setting is directly available in the `pcigale.ini` file. (Médéric Boquien)
+- Additional detail has been added to the description of the `data\_file` entry in the `pcigale.ini` file to describe how to indicate upper limits as well as regarding the use NaN for missing values. (Médéric Boquien)
+### Changed
+- New CLOUDY nebular models have been computed with an extended range in metallicities. (Patrice Theulé, Véronique Buat, and Médéric Boquien)
+- The `m2005` module has been made compatible with the `nebular` module. (Médéric Boquien)
+### Fixed
+- The list of emission lines contained a handful of incorrect entries. It has been entirely reworked in conjunction of the computation of new nebular models. (Patrice Theulé, Véronique Buat, and Médéric Boquien)
+
+## 2022.0 (2022-01-10)
+### Added
 - The polar dust model of X-CIGALE (Yang et al., 2020) for the `skirtor2016` module has been integrated into the regular version. (Médéric Boquien, based on the initial work of Guang Yang)
 - An additional check is done when constructing the `pcigale.ini` and `pcigale.ini.spec` files to avoid the generation of an incorrect `pcigale.ini.spec` when `pcigale.ini` exists but `pcigale.ini.spec` does not, which is not supposed to happen under regular circumstances. (Médéric Boquien)
 - Now `pcigale check` also displays the number of models per redshift. (Médéric Boquien)
+- Implementation of the AGN radio emission (Guang Yang, adapted by Médéric Boquien)
+- It is now possible to choose the electron density of the nebular models (10, 100, or 1000 cm¯³). (Médéric Boquien)
+- The X-ray modelling from X-CIGALE has been integrated into the regular version. This mainly comprises the new `xray` module and modifications to the fitting procedure to take into account the constraints based on ΔαOX. (Guang Yang, adapted by Médéric Boquien)
+- The ugrizy LSST filters (version 1.7) have been added to the default list of filters. (Médéric Boquien)
+- The intrinsic UV slope β₀ is now computed at the same time as the observed UV slope β when `beta_calz94` is set to `True` in the `restframe_parameters` module. (Médéric Boquien)
+- When starting `pcigale`, tables are now displayed with 1) information about cigale and the machine (cigale version, python version, and platform), 2) summary information about the run (input file names, number of objects, redshift range, number of models, band and properties to, fit number of cores, analysis module), and 3) the module used for each SED component. (Médéric Boquien & Miguel Figueira)
+- The start time, end time, and run duration are now displayed (Médéric Boquien & Miguel Figueira)
+- New CLOUDY nebular models. There are now 25 different metallicities and the metallicity of the stars and of the gas can differ. These models are described in detail in Villa-Vélez et al. (2021). (Jorge Villa-Vélez, Patrice Theulé, Véronique Buat, and Médéric Boquien)
 ### Changed
+- The IGM absorption from Meiksin has been modified to include the dependence of the hydrogen absorption cross section (~λ^2.75) so that the universe becomes transparent again at very short wavelengths. (Guang Yang, adapted by Médéric Boquien)
+- The `fluxes` module has been removed as it has been superseded by the `bands` parameter of the `pdf\_analysis` module. (Médéric Boquien)
+- The `del` command of `pcigale-filters` has been eliminated in preparation to the change of database. (Médéric Boquien)
+- The wavelengths of the plots generated by `pcigale-filters plot` are now in nm, μm, mm, or cm, whichever unit is the most appropriate for the filter in question. (Médéric Boquien)
+- The filters are now normalised to a maximum of 1 in `pcigale-filters plot`. (Médéric Boquien)
+- The internal database has been changed. Previously we relied on the SqlAlchemy as an interface to an SQLite database. This came with various drawbacks. First, the addition of new models was not as straightforward as it should have been. It required the creation of multiple files (e.g., for the database schema) scattered across different places and a lot of code duplication, which created a barrier of entry for newcomers. Then SQLite comes with some restriction on the size of the tables, which is a problem for some of the heavier models such as BPASS. The emphasis for the new database is simplicity. There is no need to declare the database schema. It is automatically inferred when building the database. Each model is stored in a file named after the primary keys (physical parameters). There is no code that is model-dependent. Now adding a new model reduces to 1) writing an import function 2) writing the corresponding SED module. As a side benefit, it appears faster too. (Médéric Boquien)
+- How upper limits are taken into account is now more flexible. In addition to the exact computation, it is now possible to waive the adjustment of the scaling of the models, an extremely slow operation that generally does not affect the results in any substantial manner. Given the important speedup, this option is now selected by default in `pdf\_analysis`. (Médéric Boquien)
+- The terminal output has been completely reworked. The level of importance of the messages are now stated (INFO, WARNING, ERROR). Progress bars have been added, indicating the total number of items processed, the number of items processed per second, the elapsed time, the remaining time. Colours are used to improve the legibility of the information. (Médéric Boquien)
 ### Fixed
 - Ensure that `pcigale-plots` correctly detects the `skirtor2016` AGN models. (Médéric Boquien, reported by Guang Yang)
 - Correct a typo in the `themis` module. (Médéric Boquien, reported by Alexandros Maragkoudakis)
+- Make sure that the best fit is also given for the bands for which `pdf\_analysis` provides a Bayesian estimate. (Médéric Boquien)
+- The `save_chi2` parameter was not correctly acknowledged in `pcigale-plots pdf`, leading to a crash as it tried to build the PDF of parameters for which the corresponding `chi2` files were not saved. (Médéric Boquien, reported by Laia Barrufet de Soto)
+- The help of `pcigale-plots sed` incorrectly reported that the values given to the `--xrange` option were in nm, rather than μm. (Médéric Boquien, reported by Guang Yang)
+- A run with an already existing `out/` directory led to a crash under Microsoft Windows. This was due to renaming `out/` to add the time with hours, minutes, and second separated by a colon. This is not allowed on this platform. The renamed directory has not been made compact and does not use colons anymore. (Médéric Boquien, reported by Samir Salim)
+- The units of line fluxes were not always correct for Bayesian estimates. (Médéric Boquien, reported by Katarzyna Małek)
+- An input redshift of integer type caused `pcigale-plots sed` to crash because it could not be formatted as a float. It is now explicitly converted to a float for safety. (Médéric Boquien)
+- SED plots could not be generated for runs without a dust attenuation module as `pcigale-plots sed` assumed there would be one. This case is now handled. (Médéric Boquien)
+- Indicate the correct possible values for the optical depth at 9.7 μm in the `skirtor2016` module. (Médéric Boquien, reported by Katarzyna Małek)
+- Prevent a crash in the spectral resampling procedure. That was due to the array containing the spectra of the individual components to be of dimension 1 when not having stellar populations and the first two modules not generating spectra on the same wavelength grid. (Médéric Boquien)
+- Give the correct unit for `param.restframe\_Lnu`. (Médéric Boquien, reported by Miguel Figueira)
+- Fix incorrect filename handling that prevented the import of the `skirtor2016` models under Microsoft Windows. (Médéric Boquien)
+- Following a past change in the way `chi2` files are saved, adapt `pcigale\_plot` to correctly produce PDF plots for physical properties that are in log rather than crashing. (Médéric Boquien)
+- Improve path handling so that all the filters are correctly imported under Microsoft Windows. (Médéric Boquien)
+- When an unknown variable is listed in `pdf\_analysis`, an exception is now raised before starting the run. (Médéric Boquien, reported by Guang Yang)
+- The `m2005` module is not compatible with the `nebular` and `xray` modules. An exception is not emitted when trying to build the `pcigale.ini` file. (Médéric Boquien, reported by Miguel Figueira)
+- When running `pcigale init` several times with an existing `pcigale.ini`, the top comment was repeatedly included due to the default behaviour of configobj. (Médéric Boquien, reported by Miguel Figueira)
+- Import `Iterable` from `collections.abc` rather than from `collections` in order to prevent `ImportError`/`AttributeError` exceptions with Python 3.10+. (Médéric Boquien)
 ### Optimised
 - The estimation of the physical properties and the related uncertainties has been made up to 50% faster. The final gain in the analysis speed accounting for all the steps depends on the number of properties to be evaluated and the number of models but can be over 25% when estimating many properties over a large parameter space. (Médéric Boquien)
+- Invalid models (e.g., when the stellar populations are older than the universe) are now ignored when handling upper limits. The speedup is very variable but can be substantial in case there are many invalid models. (Médéric Boquien)
+- Now that Python dictionaries are officially ordered, use regular dictionaries rather than collections.OrderedDict. It should translate into a very slight speedup and a slightly more readable code. (Médéric Boquien)
+- The storage of individual spectral physical components has been improved in order to require fewer memory allocations and copies. The exact gain depends somewhat on the parameter space but speedups of about 50% are typically seen. (Médéric Boquien)
+- The test to determine if we need to reinterpolate all the components when adding a new one has been made more efficient, yielding a speedup of 1.5-2.0%. (Médéric Boquien)
+- The `sfhfromfile` module is much faster now, thanks to caching the file containing the SFH. (Médéric Boquien)
+- The computation of the UV slope β in the `resftframe_parameters` module has been made faster. (Médéric Boquien)
 
 ## 2020.0 (2020-06-29)
 ### Added

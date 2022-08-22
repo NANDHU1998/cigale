@@ -16,3 +16,5 @@ with their current email address and affiliation.
   Laboratoire d'Astrophysique de Marseille, France
 * Héctor Salas Olave <hector.salas.o@gmail.com>
   Universidad de Antofagasta, Chile
+* Guang Yang <Guang Yang <gyang206265@gmail.com>
+  Texas A&M University, USA

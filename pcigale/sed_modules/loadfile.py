@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 Read spectrum from file module
 ==============================
@@ -11,10 +6,8 @@ This module reads a SED spectrum from a file.
 
 """
 
-from collections import OrderedDict
-
-from utils.io import read_table
-from . import SedModule
+from pcigale.sed_modules import SedModule
+from pcigale.utils.io import read_table
 
 
 class LoadSpecFile(SedModule):
@@ -22,24 +15,24 @@ class LoadSpecFile(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("filename", (
+    parameters = {
+        "filename": (
             'string()',
             "Name of the file to load and to add to the SED table. This "
             "file must be loadable with astropy",
             None
-        )),
-        ("lambda_column", (
+        ),
+        "lambda_column": (
             'string()',
             "Name of the column containing the wavelength in nm.",
             None
-        )),
-        ("l_lambda_column", (
+        ),
+        "l_lambda_column": (
             'string()',
             "Name of the column containing the Lλ luminosity in W/nm.",
             None
-        ))
-    ])
+        )
+    }
 
     def process(self, sed):
         """Add the spectrum from the file to the SED object

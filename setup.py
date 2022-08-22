@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2015 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 from distutils.command.build import build
 
 from setuptools import find_packages, setup
@@ -39,18 +34,22 @@ entry_points = {
                         'pcigale-filters = pcigale_filters:main']
 }
 
+with open('pcigale/version.py') as f:
+    exec(f.read())
+
 setup(
     name="pcigale",
-    version="dev",
+    version=__version__,
     packages=find_packages(exclude=["database_builder"]),
 
-    install_requires=['numpy', 'scipy', 'sqlalchemy', 'matplotlib',
-                      'configobj', 'astropy'],
-    setup_requires=['numpy', 'scipy', 'astropy', 'sqlalchemy', 'configobj'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'configobj', 'astropy',
+                      'rich'],
+    setup_requires=['numpy', 'scipy', 'astropy', 'configobj', 'rich'],
     entry_points=entry_points,
 
     cmdclass={"build": custom_build},
-    package_data={'pcigale': ['data/data.db'],
+    package_data={'pcigale': ['data/*/*.pickle',
+                              'sed_modules/curves/*.dat'],
                   'pcigale_plots': ['resources/CIGALE.png']},
 
     include_package_data=True,

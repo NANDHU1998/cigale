@@ -1,12 +1,5 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2013-2014 Yannick Roehlly
-# Copyright (C) 2013 Institute of Astronomy
-# Copyright (C) 2014 Laboratoire d'Astrophysique de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly, Médéric Boquien & Denis Burgarella
-
 import os
+
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -16,15 +9,16 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 import argparse
-import sys
-from os import path
 import multiprocessing as mp
+import sys
+from pathlib import Path
 
 from pcigale.session.configuration import Configuration
-from .plot_types.chi2 import chi2 as chi2_action
-from .plot_types.pdf import pdf as pdf_action
-from .plot_types.sed import sed as sed_action, AVAILABLE_SERIES
-from .plot_types.mock import mock as mock_action
+from pcigale_plots.plot_types.chi2 import Chi2 as chi2_action
+from pcigale_plots.plot_types.mock import Mock as mock_action
+from pcigale_plots.plot_types.pdf import PDF as pdf_action
+from pcigale_plots.plot_types.sed import AVAILABLE_SERIES
+from pcigale_plots.plot_types.sed import SED as sed_action
 
 __version__ = "0.2-alpha"
 
@@ -47,12 +41,19 @@ def parser_range(range_str):
 
 
 def main():
+    if sys.version_info[:2] < (3, 8):
+        raise Exception(f"Python {sys.version_info[0]}.{sys.version_info[1]} is"
+                        f" unsupported. Please upgrade to Python 3.8 or later.")
 
-    if sys.version_info[:2] >= (3, 4):
-        mp.set_start_method('spawn')
+    # We set the sub processes start method to spawn because it solves
+    # deadlocks when a library cannot handle being used on two sides of a
+    # forked process. This happens on modern Macs with the Accelerate library
+    # for instance. On Linux we should be pretty safe with a fork, which allows
+    # to start processes much more rapidly.
+    if sys.platform.startswith('linux'):
+        mp.set_start_method('fork')
     else:
-        print("Could not set the multiprocessing start method to spawn. If "
-              "you encounter a deadlock, please upgrade to Python≥3.4.")
+        mp.set_start_method('spawn')
 
     parser = argparse.ArgumentParser()
 
@@ -74,14 +75,14 @@ def main():
 
     sed_parser = subparsers.add_parser('sed', help=sed_action.__doc__)
     sed_parser.add_argument('--type', default='mJy',
-                             help='type of plot. Options are mJy (observed '
-                                  'frame in flux) and lum (rest-frame in '
-                                  'lumunosity).')
+                            help='type of plot. Options are mJy (observed '
+                                 'frame in flux) and lum (rest-frame in '
+                                 'lumunosity).')
     sed_parser.add_argument('--nologo', action='store_true')
     sed_parser.add_argument('--format', default='pdf', help=fmtstr)
     sed_parser.add_argument('--outdir', default='out')
     sed_parser.add_argument('--xrange', default=':', type=parser_range,
-                            help='Wavelength range [<min>]:[<max>] in nm.')
+                            help='Wavelength range [<min>]:[<max>] in μm.')
     sed_parser.add_argument('--yrange', default=':', type=parser_range,
                             help='y-axis range [<min>]:[<max>].')
     sed_parser.add_argument('--series', nargs='*',
@@ -100,12 +101,12 @@ def main():
     mock_parser.set_defaults(parser='mock')
 
     args = parser.parse_args()
-    outdir = path.abspath(args.outdir)
+    outdir = Path(args.outdir)
 
     if args.config_file:
-        config = Configuration(args.config_file)
+        config = Configuration(Path(args.config_file))
     else:
-        config = Configuration(path.join(path.dirname(outdir), 'pcigale.ini'))
+        config = Configuration(outdir / 'pcigale.ini')
 
     if len(sys.argv) == 1:
         parser.print_usage()

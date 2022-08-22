@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2015 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2015 Institute of Astronomy, University of Cambridge
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Denis Burgarella
-
 """
 Modified Black Body module
 ======================================
@@ -16,12 +10,12 @@ wavelength range.
 
 """
 
-from collections import OrderedDict
-
 import numpy as np
 import scipy.constants as cst
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
+
+__category__ = "dust emission"
 
 
 class MBB(SedModule):
@@ -34,29 +28,29 @@ class MBB(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("epsilon_mbb", (
+    parameters = {
+        "epsilon_mbb": (
             "cigale_list(minvalue=0., maxvalue=1.)",
             "Fraction [>= 0] of L_dust(energy balance) in the MBB",
             0.5
-        )),
-        ("t_mbb", (
+        ),
+        "t_mbb": (
             "cigale_list(minvalue=0.)",
             "Temperature of black body in K.",
             50.
-        )),
-        ("beta_mbb", (
+        ),
+        "beta_mbb": (
             "cigale_list()",
             "Emissivity index of modified black body.",
             1.5
-        )),
-        ("energy_balance", (
+        ),
+        "energy_balance": (
             "boolean()",
             "Energy balance checked?"
             "If False, Lum[MBB] not taken into account in energy balance",
             False
-        )),
-    ])
+        )
+    }
 
     def _init_code(self):
         """Build the model for a given set of parameters."""
@@ -64,7 +58,7 @@ class MBB(SedModule):
         self.epsilon = float(self.parameters["epsilon_mbb"])
         self.T = float(self.parameters["t_mbb"])
         self.beta = float(self.parameters["beta_mbb"])
-        if type(self.parameters["energy_balance"]) is str:
+        if isinstance(self.parameters["energy_balance"], str):
             self.energy_balance = self.parameters["energy_balance"].lower() == 'true'
         else:
             self.energy_balance = bool(self.parameters["energy_balance"])
@@ -113,12 +107,11 @@ class MBB(SedModule):
             # existing as:
             # luminosity_other_balance = -luminosity_other * (1-epsilon);
             # epsilon being the contribution of the present MBB to L_dust.
-            other_dust_contributions = [contrib for contrib in
-                                        sed.contribution_names if
-                                        "dust" in contrib]
+            other_dust_contributions = [contrib for contrib in sed.luminosities
+                                        if "dust" in contrib]
             for item in other_dust_contributions:
                 item_balance = item + '_balance'
-                lumin = sed.get_lumin_contribution(item)
+                lumin = sed.luminosities[item]
                 wavelength = sed.wavelength_grid
                 sed.add_info(item_balance, 1., True)
                 sed.add_contribution(item_balance, wavelength, -lumin *

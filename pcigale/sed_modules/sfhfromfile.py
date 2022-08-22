@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
 """
 Read star formation history from file module
 ============================================
@@ -11,12 +6,12 @@ This module reads the star formation history in a file.
 
 """
 
-from collections import OrderedDict
-
 import numpy as np
 
-from utils.io import read_table
-from . import SedModule
+from pcigale.sed_modules import SedModule
+from pcigale.utils.io import read_table
+
+__category__ = "SFH"
 
 
 class SfhFromFile(SedModule):
@@ -30,48 +25,48 @@ class SfhFromFile(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("filename", (
+    parameters = {
+        "filename": (
             "string()",
             "Name of the file containing the SFH. The first column must be "
             "the time in Myr, starting from 0 with a step of 1 Myr. The other "
             "columns must contain the SFR in Msun/yr."
             "[Msun/yr].",
             None
-        )),
-        ("sfr_column", (
+        ),
+        "sfr_column": (
             "cigale_list(dtype=int)",
             "List of column indices of the SFR. The first SFR column has the "
             "index 1.",
             None
-        )),
-        ("age", (
+        ),
+        "age": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Age in Myr at which the SFH will be looked at.",
             None
-        )),
-        ("normalise", (
+        ),
+        "normalise": (
             "boolean()",
             "Normalise the SFH to one solar mass produced at the given age.",
             True
-        ))
-    ])
+        )
+    }
 
     def _init_code(self):
         filename = self.parameters['filename']
         age = int(self.parameters['age'])
         self.sfr_column_number = int(self.parameters['sfr_column'])
-        if type(self.parameters["normalise"]) is str:
+        if isinstance(self.parameters["normalise"], str):
             normalise = self.parameters["normalise"].lower() == 'true'
         else:
             normalise = bool(self.parameters["normalise"])
 
         table = read_table(filename)
-        self.sfr = table.columns[self.sfr_column_number].data.astype(np.float)
-        time_grid = table.columns[0].data.astype(np.int)
+        self.sfr = table.columns[self.sfr_column_number].data.astype(np.float64)
+        time_grid = table.columns[0].data.astype(np.int64)
         if time_grid[0] != 0:
             raise Exception("The time grid must start from 0.")
-        if np.all(time_grid[1:]-time_grid[:-1] == 1) == False:
+        if not np.all(time_grid[1:] - time_grid[:-1] == 1):
             raise Exception("The time step must be 1 Myr. Computed models will"
                             " be wrong.")
 

@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2017 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
+from pathlib import Path
 
-from astropy.table import Column
 import numpy as np
+from astropy.table import Column
 from scipy.constants import parsec
 
-from ..utils.cosmology import luminosity_distance
-from utils.io import read_table
-from .utils import get_info
+from pcigale.utils.console import WARNING, console
+from pcigale.utils.cosmology import luminosity_distance
+from pcigale.utils.io import read_table
+
+from pcigale.managers.utils import get_info
 
 
-class ObservationsManager(object):
+class ObservationsManager:
     """Class to abstract the handling of the observations and provide a
     consistent interface for the rest of cigale to deal with observations.
 
@@ -27,7 +26,7 @@ class ObservationsManager(object):
             return ObservationsManagerVirtual(config, **kwargs)
 
 
-class ObservationsManagerPassbands(object):
+class ObservationsManagerPassbands:
     """Class to generate a manager for data files providing fluxes in
     passbands.
 
@@ -67,7 +66,7 @@ class ObservationsManagerPassbands(object):
         self._check_errors(defaulterror)
         self._check_invalid(config['analysis_params']['lim_flag'],
                             threshold)
-        self._add_model_error(modelerror)
+        self._add_model_error(config["additionalerror"])
 
         # Rebuild the quantities to fit after vetting them
         self.tofit = self.bands + self.intprops + self.extprops
@@ -124,8 +123,8 @@ class ObservationsManagerPassbands(object):
             if (item != 'id' and item != 'redshift' and item != 'distance' and
                     item not in self.tofit + self.tofit_err):
                 self.table.remove_column(item)
-                print(f"Warning: {item} in the input file but not to be taken "
-                      f"into account in the fit.")
+                console.print(f"{WARNING} [b]{item}[/b] in the input file but "
+                              "not to be taken into account in the fits.")
 
     def _check_errors(self, defaulterror=0.1):
         """Check whether the error columns are present. If not, add them.
@@ -161,11 +160,11 @@ class ObservationsManagerPassbands(object):
                 colerr = Column(data=np.fabs(self.table[item] * defaulterror),
                                 name=error)
                 self.table.add_column(colerr,
-                                      index=self.table.colnames.index(item)+1)
-                print(f"Warning: {defaulterror * 100}% of {item} taken as "
-                      f"errors.")
+                                      index=self.table.colnames.index(item) + 1)
+                console.print(f"{WARNING} {defaulterror * 100}% of {item} "
+                              "taken as errors.")
 
-    def _check_invalid(self, upperlimits=False, threshold=-9990.):
+    def _check_invalid(self, upperlimits="none", threshold=-9990.):
         """Check whether invalid data are correctly marked as such.
 
         This happens in two cases:
@@ -186,7 +185,7 @@ class ObservationsManagerPassbands(object):
 
         for item in self.bands + self.extprops:
             error = item + '_err'
-            if upperlimits is False:
+            if upperlimits == "none":
                 w = np.where((self.table[item] < threshold) |
                              (self.table[error] <= 0.))
             else:
@@ -205,7 +204,8 @@ class ObservationsManagerPassbands(object):
                 self.extprops.remove(item)
                 self.extprops_err.remove(item + '_err')
             self.table.remove_columns([item, item + '_err'])
-            print(f"Warning: {allinvalid} removed as no valid data was found.")
+            console.print(f"{WARNING} {allinvalid} removed as no valid data "
+                          "was found.")
 
     def _add_model_error(self, modelerror=0.1):
         """Add in quadrature the error of the model to the input error.
@@ -224,7 +224,7 @@ class ObservationsManagerPassbands(object):
             error = item + '_err'
             w = np.where(self.table[error] >= 0.)
             self.table[error][w] = np.sqrt(self.table[error][w]**2. + (
-                self.table[item][w]*modelerror)**2.)
+                self.table[item][w] * modelerror)**2.)
 
     def generate_mock(self, fits):
         """Replaces the actual observations with a mock catalogue. It is
@@ -266,12 +266,13 @@ class ObservationsManagerPassbands(object):
             Root of the filename where to save the observations.
 
         """
-        self.table.write(f'out/{filename}.fits')
-        self.table.write(f'out/{filename}.txt', format='ascii.fixed_width',
+        out = Path('out')
+        self.table.write(out / f'{filename}.fits')
+        self.table.write(out / f'{filename}.txt', format='ascii.fixed_width',
                          delimiter=None)
 
 
-class ObservationsManagerVirtual(object):
+class ObservationsManagerVirtual:
     """Virtual observations manager when there is no observations file given
     as input. In that case we only use the list of bands given in the
     pcigale.ini file.
@@ -282,9 +283,10 @@ class ObservationsManagerVirtual(object):
                       band.endswith('_err')]
 
         if len(self.bands) != len(config['bands']):
-            print("Warning: error bars were given in the list of bands.")
+            console.print(f"{WARNING} error bars were given in the list of "
+                          "bands.")
         elif len(self.bands) == 0:
-            print("Warning: no band was given.")
+            console.print(f"{WARNING} no band was given.")
 
         # We set the other class members to None as they do not make sense in
         # this situation
@@ -299,7 +301,7 @@ class ObservationsManagerVirtual(object):
         return 0
 
 
-class Observation(object):
+class Observation:
     """Class to take one row of the observations table and extract the list of
     fluxes, intensive properties, extensive properties and their errors, that
     are going to be considered in the fit.

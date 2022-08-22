@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-
 from functools import lru_cache
 
 from astropy.cosmology import WMAP7 as _cosmo
@@ -24,7 +21,7 @@ def luminosity_distance(redshift):
     """
     if redshift > 0:
         return _cosmo.luminosity_distance(redshift).value * 1e6 * parsec
-    return 10. * parsec
+    return 10.0 * parsec
 
 
 @lru_cache(maxsize=None)
@@ -41,4 +38,4 @@ def age(redshift):
     age: float
         Age of the universe in Myr at the corresponding redshift
     """
-    return _cosmo.age(redshift).value * 1000.
+    return _cosmo.age(redshift).value * 1000.0

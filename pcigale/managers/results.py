@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2017 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Médéric Boquien
-
 """These classes manage the results from the analysis. The main class
 ResultsManager contains instances of BayesResultsManager and BestResultsManager
 that contain the bayesian and best-fit estimates of the physical properties
@@ -11,15 +6,17 @@ etc. Each of these classes contain a merge() method that allows to combine
 results of the analysis with different blocks of models.
 """
 import ctypes
+from pathlib import Path
 
-from astropy.table import Table, Column
-from astropy.units import Unit, LogUnit
 import numpy as np
+from astropy.table import Column, Table
+from astropy.units import LogUnit, Unit
 
-from .utils import SharedArray
+from pcigale.managers.utils import SharedArray
+from pcigale.utils.console import ERROR, INFO, console
 
 
-class BayesResultsManager(object):
+class BayesResultsManager:
     """This class contains the results of the bayesian estimates of the
     physical properties of the analysed objects. It is constructed from a
     ModelsManager instance, which provides the required information on the
@@ -109,10 +106,10 @@ class BayesResultsManager(object):
                     for prop in merged.exterror}
         fluxmean = {band: np.array([result.fluxmean[band]
                                    for result in results])
-                   for band in merged.fluxmean}
+                    for band in merged.fluxmean}
         fluxerror = {band: np.array([result.fluxerror[band]
                                     for result in results])
-                    for band in merged.fluxerror}
+                     for band in merged.fluxerror}
         weight = np.array([result.weight for result in results])
 
         totweight = np.nansum(weight, axis=0)
@@ -127,7 +124,7 @@ class BayesResultsManager(object):
             # datapoints has been substituted with the weights. In short we
             # exploit the fact that Var(X) = E(Var(X)) + Var(E(X)).
             merged.interror[prop][:] = np.sqrt(np.nansum(
-                weight * (interror[prop]**2. + (intmean[prop]-merged.intmean[prop])**2), axis=0) / totweight)
+                weight * (interror[prop]**2. + (intmean[prop] - merged.intmean[prop])**2), axis=0) / totweight)
 
         for prop in merged.extmean:
             merged.extmean[prop][:] = np.nansum(
@@ -139,7 +136,7 @@ class BayesResultsManager(object):
             # datapoints has been substituted with the weights. In short we
             # exploit the fact that Var(X) = E(Var(X)) + Var(E(X)).
             merged.exterror[prop][:] = np.sqrt(np.nansum(
-                weight * (exterror[prop]**2. + (extmean[prop]-merged.extmean[prop])**2), axis=0) / totweight)
+                weight * (exterror[prop]**2. + (extmean[prop] - merged.extmean[prop])**2), axis=0) / totweight)
 
         for prop in merged.extmean:
             if prop.endswith('_log'):
@@ -160,13 +157,12 @@ class BayesResultsManager(object):
             # datapoints has been substituted with the weights. In short we
             # exploit the fact that Var(X) = E(Var(X)) + Var(E(X)).
             merged.fluxerror[band][:] = np.sqrt(np.nansum(
-                weight * (fluxerror[band]**2. + (fluxmean[band]-merged.fluxmean[band])**2), axis=0) / totweight)
-
+                weight * (fluxerror[band]**2. + (fluxmean[band] - merged.fluxmean[band])**2), axis=0) / totweight)
 
         return merged
 
 
-class BestResultsManager(object):
+class BestResultsManager:
     """This class contains the physical properties of the best fit of the
     analysed objects. It is constructed from a ModelsManager instance, which
     provides the required information on the shape of the arrays. Because it
@@ -183,7 +179,9 @@ class BestResultsManager(object):
         # to the pool. Each worker will fill a part of the RawArrays. It is
         # important that there is no conflict and that two different workers do
         # not write on the same section.
-        self.flux = {band: SharedArray(nobs) for band in models.obs.bands}
+        fluxnames = list(dict.fromkeys(models.obs.bands +
+                                       models.conf['analysis_params']['bands']))
+        self.flux = {band: SharedArray(nobs) for band in fluxnames}
         allintpropnames = models.allintpropnames
         allextpropnames = models.allextpropnames
         self.intprop = {prop: SharedArray(nobs)
@@ -313,22 +311,22 @@ class BestResultsManager(object):
         # fitted. We warn the user in that case
         bad = [str(id_) for id_ in self.obs.table['id'][np.isnan(self.chi2)]]
         if len(bad) > 0:
-            print(f"No suitable model found for {', '.join(bad)}. It may be "
-                  f"that models are older than the universe or that your χ² are"
-                  f" very large.")
+            console.print(f"{ERROR} No suitable model found for "
+                          f"{', '.join(bad)}. It may be that models are older "
+                          "than the universe or that the χ² are very large.")
 
         obs = [self.obs.table[obs].data for obs in self.obs.tofit]
         nobs = np.count_nonzero(np.isfinite(obs), axis=0)
         chi2_red = self.chi2 / (nobs - 1)
         # If low values of reduced chi^2, it means that the data are overfitted
         # Errors might be under-estimated or not enough valid data.
-        print(f"{np.round(100. * (chi2_red < 1e-12).sum() / chi2_red.size, 1)}%"
-              f" of the objects have χ²_red~0 and "
-              f"{np.round(100. * (chi2_red < 0.5).sum() / chi2_red.size, 1)}% "
-              f"χ²_red<0.5")
+        console.print(f"{INFO} {np.round(100. * (chi2_red < 1e-12).sum() / chi2_red.size, 1)}%"
+                      " of the objects have χ²_red~0 and "
+                      f"{np.round(100. * (chi2_red < 0.5).sum() / chi2_red.size, 1)}% "
+                      "χ²_red<0.5.")
 
 
-class ResultsManager(object):
+class ResultsManager:
     """This class contains the physical properties (best fit and bayesian) of
     the analysed objects. It is constructed from a ModelsManager instance,
     which provides the required information to initialise the instances of
@@ -364,6 +362,25 @@ class ResultsManager(object):
 
         return merged
 
+    @staticmethod
+    def fluxunit(band):
+        """Help function to determine whether the band is a line or a filter
+        and returns the appropriate unit.
+
+        Parameters
+        ----------
+        band: str
+            Name of the band. For a line it must start with ".line".
+
+        Returns
+        -------
+        unit: astropy.unit.Unit
+            Unit of the band flux.
+        """
+        if band.startswith('line.') or band.startswith('linefilter.'):
+            return Unit('W/m^2')
+        return Unit('mJy')
+
     def save(self, filename):
         """Save the estimated values derived from the analysis of the PDF and
         the parameters associated with the best fit. A simple text file and a
@@ -384,24 +401,25 @@ class ResultsManager(object):
             else:
                 unit = Unit(self.unit[prop])
             table.add_column(Column(self.bayes.intmean[prop],
-                                    name="bayes."+prop, unit=unit))
+                                    name="bayes." + prop, unit=unit))
             table.add_column(Column(self.bayes.interror[prop],
-                                    name="bayes."+prop+"_err", unit=unit))
+                                    name="bayes." + prop + "_err", unit=unit))
         for prop in sorted(self.bayes.extmean):
             if prop.endswith('_log'):
                 unit = LogUnit(self.unit[prop[:-4]])
             else:
                 unit = Unit(self.unit[prop])
             table.add_column(Column(self.bayes.extmean[prop],
-                                    name="bayes."+prop, unit=unit))
+                                    name="bayes." + prop, unit=unit))
             table.add_column(Column(self.bayes.exterror[prop],
-                                    name="bayes."+prop+"_err", unit=unit))
+                                    name="bayes." + prop + "_err", unit=unit))
         for band in sorted(self.bayes.fluxmean):
+            unit = self.fluxunit(band)
             table.add_column(Column(self.bayes.fluxmean[band],
-                                    name="bayes."+band, unit=Unit('mJy')))
+                                    name="bayes." + band, unit=unit))
             table.add_column(Column(self.bayes.fluxerror[band],
-                                    name="bayes."+band+"_err",
-                                    unit=Unit('mJy')))
+                                    name="bayes." + band + "_err",
+                                    unit=unit))
 
         table.add_column(Column(self.best.chi2, name="best.chi_square"))
         obs = [self.obs.table[obs].data for obs in self.obs.tofit]
@@ -411,22 +429,19 @@ class ResultsManager(object):
 
         for prop in sorted(self.best.intprop):
             table.add_column(Column(self.best.intprop[prop],
-                                    name="best."+prop,
+                                    name="best." + prop,
                                     unit=Unit(self.unit[prop])))
         for prop in sorted(self.best.extprop):
             table.add_column(Column(self.best.extprop[prop],
-                                    name="best."+prop,
+                                    name="best." + prop,
                                     unit=Unit(self.unit[prop])))
 
-        for band in self.obs.bands:
-            if band.startswith('line.') or band.startswith('linefilter.'):
-                unit = 'W/m^2'
-            else:
-                unit = 'mJy'
+        for band in self.best.flux:
             table.add_column(Column(self.best.flux[band],
-                                    name="best."+band, unit=unit))
+                                    name="best." + band,
+                                    unit=self.fluxunit(band)))
 
-
-        table.write(f"out/{filename}.txt", format='ascii.fixed_width',
+        out = Path('out')
+        table.write(out / f"{filename}.txt", format='ascii.fixed_width',
                     delimiter=None)
-        table.write(f"out/{filename}.fits", format='fits')
+        table.write(out / f"{filename}.fits", format='fits')

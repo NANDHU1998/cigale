@@ -1,9 +1,3 @@
-# Copyright (C) 2015 Centre de données Astrophysiques de Marseille
-# Copyright (C) 2015 Institute of Astronomy
-# Copyright (C) 2015 Universidad de Antofagasta
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Denis Burgarella & Médéric Boquien
-
 """
 Periodic SFH in the form of rectangles, and decaying or delayed exponentials
 ============================================================================
@@ -14,11 +8,11 @@ decaying exponential, or "delayed".
 
 """
 
-from collections import OrderedDict
-
 import numpy as np
 
-from . import SedModule
+from pcigale.sed_modules import SedModule
+
+__category__ = "SFH"
 
 
 class SfhPeriodic(SedModule):
@@ -29,43 +23,43 @@ class SfhPeriodic(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("type_bursts", (
+    parameters = {
+        "type_bursts": (
             "cigale_list(dtype=int, options=0. & 1. & 2.)",
             "Type of the individual star formation episodes. 0: exponential, "
             "1: delayed, 2: rectangle.",
             0
-        )),
-        ("delta_bursts", (
+        ),
+        "delta_bursts": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Elapsed time between the beginning of each burst in Myr. The "
             "precision is 1 Myr.",
             50
-        )),
-        ("tau_bursts", (
+        ),
+        "tau_bursts": (
             "cigale_list()",
             "Duration (rectangle) or e-folding time of all short events in "
             "Myr. The precision is 1 Myr.",
             20.
-        )),
-        ("age", (
+        ),
+        "age": (
             "cigale_list(dtype=int, minvalue=0.)",
             "Age of the main stellar population in the galaxy in Myr. The "
             "precision is 1 Myr.",
             1000
-        )),
-        ("sfr_A", (
+        ),
+        "sfr_A": (
             "cigale_list(minvalue=0.)",
             "Multiplicative factor controlling the amplitude of SFR (valid "
             "for each event).",
             1.
-        )),
-        ("normalise", (
+        ),
+        "normalise": (
             "boolean()",
             "Normalise the SFH to produce one solar mass.",
             True
-        )),
-    ])
+        ),
+    }
 
     def _init_code(self):
         self.type_bursts = int(self.parameters["type_bursts"])
@@ -73,26 +67,26 @@ class SfhPeriodic(SedModule):
         self.tau_bursts = float(self.parameters["tau_bursts"])
         age = int(self.parameters["age"])
         sfr_A = float(self.parameters["sfr_A"])
-        if type(self.parameters["normalise"]) is str:
+        if isinstance(self.parameters["normalise"], str):
             normalise = self.parameters["normalise"].lower() == 'true'
         else:
             normalise = bool(self.parameters["normalise"])
 
         time_grid = np.arange(0, age)
-        self.sfr = np.zeros_like(time_grid, dtype=np.float)
+        self.sfr = np.zeros_like(time_grid, dtype=np.float64)
 
         if self.type_bursts == 0:
-            burst = np.exp(-time_grid/self.tau_bursts)
+            burst = np.exp(-time_grid / self.tau_bursts)
         elif self.type_bursts == 1:
-            burst = np.exp(-time_grid/self.tau_bursts) * \
-                    time_grid/self.tau_bursts**2
+            burst = np.exp(-time_grid / self.tau_bursts) * \
+                time_grid / self.tau_bursts**2
         elif self.type_bursts == 2:
             burst = np.zeros_like(time_grid)
-            burst[:int(self.tau_bursts)+1] = 1.
+            burst[:int(self.tau_bursts) + 1] = 1.
         else:
             raise Exception(f"Burst type {self.type_bursts} unknown.")
 
-        for t_burst in np.arange(0, age, self.delta_bursts):
+        for _ in np.arange(0, age, self.delta_bursts):
             self.sfr += burst
             burst = np.roll(burst, self.delta_bursts)
             burst[:self.delta_bursts] = 0.

@@ -1,36 +1,31 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2013 Centre de données Astrophysiques de Marseille
-# Licensed under the CeCILL-v2 licence - see Licence_CeCILL_V2-en.txt
-# Author: Yannick Roehlly
-
-import os
 import inspect
+import os
 from importlib import import_module
 
 
-def complete_parameters(given_parameters, parameter_list):
+def complete_parameters(given_parameters, parameters, hidden):
     """Complete the given parameter list with the default values
 
     Complete the given_parameters dictionary with missing parameters that have
-    a default value in the parameter_list. If a parameter from parameter_list
-    have no default value and is not present in given_parameters, raises an
-    error. If a parameter is present in given_parameters and not in
-    parameter_list, an exception is also raised.
-    Returns an ordered dictionary with the same key order as the parameter
-    list.
+    a default value in parameters. If a parameter from parameters has no
+    default value and is not present in given_parameters, raises an error.
+    If a parameter is present in given_parameters and not in parameters, an
+    exception is also raised. Returns a dict.
 
     Parameters
     ----------
     given_parameters: dictionary
         Parameter dictionary used to configure the module.
-    parameter_list: dictionary
+    parameters: dictionary
         Parameter list from the module.
+    hidden: set
+        Hidden parameters
 
     Returns
     -------
     parameters: dict
-        Ordered dictionary combining the given parameters with the default
-        values for the missing ones.
+        Dictionary combining the given parameters with the default values for
+        the missing ones.
 
     Raises
     ------
@@ -38,46 +33,45 @@ def complete_parameters(given_parameters, parameter_list):
 
     """
     # Complete the given parameters with default values when needed.
-    for key in parameter_list:
+    for key in parameters:
         if (key not in given_parameters) and (
-                parameter_list[key][2] is not None):
-            given_parameters[key] = parameter_list[key][2]
+                parameters[key][2] is not None):
+            given_parameters[key] = parameters[key][2]
+
     # Check parameter consistency between the parameter list and the given
     # parameters.
-    if not set(given_parameters) == set(parameter_list):
-        missing_parameters = (set(parameter_list) - set(given_parameters))
-        unexpected_parameters = (set(given_parameters) - set(parameter_list))
-        message = ""
-        if missing_parameters:
-            message += ("Missing parameters: " +
-                        ", ".join(missing_parameters) +
-                        ". ")
-        if unexpected_parameters:
-            message += ("Unexpected parameters: " +
-                        ", ".join(unexpected_parameters) +
-                        ". ")
-        raise KeyError("The parameters passed are different from the "
-                       "expected one. " + message)
+    missing_parameters = set(parameters) - set(given_parameters)
+    if len(missing_parameters) > 0:
+        message = f"Missing parameters: {', '.join(missing_parameters)}."
+        raise KeyError(message)
 
-    # We want the result to be ordered as the parameter_list of the module is.
+    unexpected_parameters = set(given_parameters) - set(parameters) - hidden
+    if len(unexpected_parameters) > 0:
+        message = (f"Unexpected parameters: {', '.join(unexpected_parameters)}.")
+        raise KeyError(message)
+
+    # We want the result to be ordered as the parameters of the module are.
     result = dict()
-    for key in parameter_list:
+    for key in parameters:
+        result[key] = given_parameters[key]
+
+    for key in hidden:
         result[key] = given_parameters[key]
 
     return result
 
 
-class SedModule(object):
+class SedModule:
     """Abstract class, the pCigale SED creation modules are based on.
     """
 
-    # parameter_list is a dictionary containing all the parameters
-    # used by the module. Each parameter name is associate to a tuple
-    # (variable type, description [string], default value). Each module must
-    # define its parameter list, unless it does not use any parameter. Using
-    # None means that there is no description or default value. If None should
-    # be the default value, use the 'None' string instead.
-    parameter_list = dict()
+    # parameters is a dictionary containing all the parameters used by the
+    # module. Each parameter name is associate to a tuple (variable type,
+    # description [string], default value). Each module must define its
+    # parameters list, unless it does not use any parameter. Using None means
+    # that there is no description or default value. If None should be the
+    # default value, use the 'None' string instead.
+    parameters = dict()
 
     # comments is the text that is used to comment the module section in
     # the configuration file. For instance, it can be used to give special
@@ -92,9 +86,9 @@ class SedModule(object):
         creation process.
 
         The module parameters must be passed as keyword parameters. If a
-        parameter is not given but exists in the parameter_list with a default
-        value, this value is used. If a parameter is missing or if an
-        unexpected parameter is given, an error will be raised.
+        parameter is not given but exists in parameters with a default value,
+        this value is used. If a parameter is missing or if an unexpected
+        parameter is given, an error will be raised.
 
         Parameters
         ----------
@@ -121,9 +115,14 @@ class SedModule(object):
             parameters = kwargs
 
             # Complete the parameter dictionary and "export" it to the module
-            self.parameters = complete_parameters(parameters,
-                                                  self.parameter_list)
-
+            if hasattr(self, "hidden_parameters"):
+                self.parameters = complete_parameters(parameters,
+                                                      self.parameters,
+                                                      self.hidden_parameters)
+            else:
+                self.parameters = complete_parameters(parameters,
+                                                      self.parameters,
+                                                      set())
             # Run the initialisation code specific to the module.
             self._init_code()
 
@@ -170,5 +169,4 @@ def get_module(name, **kwargs):
         module = import_module("." + name, 'pcigale.sed_modules')
         return module.Module(name=name, **kwargs)
     except ImportError:
-        print('Module ' + name + ' does not exist!')
-        raise
+        raise Exception(f"Module {name} could not be imported.")
