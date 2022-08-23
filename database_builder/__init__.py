@@ -1240,32 +1240,32 @@ def build_base(bc03res="lr", bpassres="lr"):
     print("#" * 78)
 
     print("2- Importing Maraston 2005 SSP\n")
-    #build_m2005()
+    build_m2005()
     print("\nDONE\n")
     print("#" * 78)
 
     print("3- Importing Bruzual and Charlot 2003 SSP\n")
-    #build_bc2003(bc03res)
+    build_bc2003(bc03res)
     print("\nDONE\n")
     print("#" * 78)
 
     print("4- Importing the BPASS v2.2 SSP\n")
-    #build_bpassv2(bpassres)
+    build_bpassv2(bpassres)
     print("\nDONE\n")
     print('#' * 78)
 
     print("5- Importing Draine and Li (2007) models\n")
-    #build_dl2007()
+    build_dl2007()
     print("\nDONE\n")
     print("#" * 78)
 
     print("5- Importing the updated Draine and Li (2007) models\n")
-    #build_dl2014()
+    build_dl2014()
     print("\nDONE\n")
     print("#" * 78)
 
     print("6- Importing Jones et al (2017) models)\n")
-    #build_themis()
+    build_themis()
     print("\nDONE\n")
     print('#' * 78)
 
