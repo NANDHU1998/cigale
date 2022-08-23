@@ -356,18 +356,16 @@ def build_bc2003(res):
         ssp_wave = np.hstack([ssp_wave[: argmin + 1], ssp_wave_resamp])
         ssp_lumin = np.vstack([ssp_lumin_interp[: argmin + 1, :], ssp_lumin_resamp])
 
-        base.add_bc03(BC03(
-            imf,
-            metallicity[key],
-            time_grid,
-            ssp_wave,
-            color_table,
-            ssp_lumin
-        ))
+        db.add(
+            {"imf": imf, "Z": metallicity[key]},
+            {"t": time_grid, "wl": ssp_wave, "info": color_table, "spec": ssp_lumin},
+        )
+    db.close()
 
 
-def build_bpassv2(base, bpassres):
-    bpass_dir = os.path.join(os.path.dirname(__file__), 'bpassv2.2/')
+def build_bpassv2(bpassres):
+    path = Path(__file__).parent / "bpassv2.2"
+    db = SimpleDatabase("bpassv2", writable=True)
 
     # Time grid (1 Myr to 13.7 Gyr with 1 Myr step)
     ssp_timegrid = np.arange(1, 13700)
@@ -376,7 +374,8 @@ def build_bpassv2(base, bpassres):
     # refined for our purpose. By default we interpolate on the grid of the low
     # resolution BC03 models. We remove the wavelengths beyond 10 microns as
     # they are out of the range covered by BPASS.
-    spec_wave_lr = base.get_bc03('salp', 0.02).wavelength_grid
+    with SimpleDatabase("bc03") as bc03db:
+        spec_wave_lr = bc03db.get(imf="salp", Z=0.02).wl
     spec_wave_lr = spec_wave_lr[spec_wave_lr <= 10000.]
 
     # Metallicities associated to each key
@@ -409,15 +408,15 @@ def build_bpassv2(base, bpassres):
         "chab300": 8
     }
 
-    basename = "{}{}-{}-imf_{}.z{}.dat.gz"
+    basename = "{}-{}-imf_{}.z{}.dat.gz"
 
     for key_metal, key_imf, binary in itertools.product(metal, imf,
                                                         ['bin', 'sin']):
-        specname = basename.format(bpass_dir, 'spectra', binary, key_imf,
+        specname = path / basename.format("spectra", binary, key_imf,
                                    key_metal)
-        ionname = basename.format(bpass_dir, 'ionizing', binary, key_imf,
+        ionname = path / basename.format("ionizing", binary, key_imf,
                                   key_metal)
-        massname = basename.format(bpass_dir, 'starmass', binary, key_imf,
+        massname = path / basename.format("starmass", binary, key_imf,
                                    key_metal)
 
         # As BPASS models are very large, it is unlikely that they are all
@@ -425,7 +424,7 @@ def build_bpassv2(base, bpassres):
         if not Path(specname).is_file():
             continue
 
-        print("Importing {}...".format(specname))
+        print(f"Importing {specname}...")
 
         spec = np.genfromtxt(specname)
 
@@ -455,20 +454,16 @@ def build_bpassv2(base, bpassres):
 
         ssp_info = np.array([ssp_mass, ssp_ion])
 
-        base.add_bpassv2(BPASSv2(
-            imf[key_imf],
-            metal[key_metal],
-            True if 'bin' in binary else False,
-            ssp_timegrid,
-            spec_wave_lr if bpassres == 'lr' else spec_wave,
-            ssp_info,
-            ssp_lumin
-        ))
+        db.add(
+            {"imf": imf[key_imf], "Z": metal[key_metal], "binary": True if 'bin' in binary else False},
+            {"t": ssp_timegrid, "wl": spec_wave_lr if bpassres == 'lr' else spec_wave, "info": ssp_info, "spec": ssp_lumin},
+        )
+    db.close()
 
 
-def build_dale2014(base):
-    models = []
-    dale2014_dir = os.path.join(os.path.dirname(__file__), 'dale2014/')
+def build_dale2014():
+    path = Path(__file__).parent / "dale2014"
+    db = SimpleDatabase("dale2014", writable=True)
 
     # Getting the alpha grid for the templates
     d14cal = np.genfromtxt(path / "dhcal.dat")
@@ -1237,7 +1232,7 @@ def build_themis():
     db.close()
 
 
-def build_base(bc03res="lr"):
+def build_base(bc03res="lr", bpassres="lr"):
     print("#" * 78)
     print("1- Importing filters...\n")
     build_filters()
@@ -1245,32 +1240,32 @@ def build_base(bc03res="lr"):
     print("#" * 78)
 
     print("2- Importing Maraston 2005 SSP\n")
-    build_m2005()
+    #build_m2005()
     print("\nDONE\n")
     print("#" * 78)
 
     print("3- Importing Bruzual and Charlot 2003 SSP\n")
-    build_bc2003(bc03res)
+    #build_bc2003(bc03res)
     print("\nDONE\n")
     print("#" * 78)
 
     print("4- Importing the BPASS v2.2 SSP\n")
-    build_bpassv2(base, bpassres)
+    #build_bpassv2(bpassres)
     print("\nDONE\n")
     print('#' * 78)
 
     print("5- Importing Draine and Li (2007) models\n")
-    build_dl2007(base)
+    #build_dl2007()
     print("\nDONE\n")
     print("#" * 78)
 
     print("5- Importing the updated Draine and Li (2007) models\n")
-    build_dl2014()
+    #build_dl2014()
     print("\nDONE\n")
     print("#" * 78)
 
     print("6- Importing Jones et al (2017) models)\n")
-    build_themis()
+    #build_themis()
     print("\nDONE\n")
     print('#' * 78)
 

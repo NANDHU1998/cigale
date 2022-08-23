@@ -11,12 +11,12 @@ This module implements the BPASS v2 Single Stellar Populations.
 
 """
 
-from collections import OrderedDict
-
 import numpy as np
 
 from . import SedModule
-from ..data import Database
+from pcigale.data import SimpleDatabase
+
+__category__ = "SSP"
 
 
 class BPASSv2(SedModule):
@@ -27,8 +27,8 @@ class BPASSv2(SedModule):
 
     """
 
-    parameter_list = OrderedDict([
-        ("imf", (
+    parameters = {
+        "imf": (
             "cigale_list(dtype=int, options=0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8)",
             "Initial mass function: 0 (-1.30 between 0.1 to 0.5Msun and -2.00 "
             "from 0.5 to 300Msun), 1 (-1.30 between 0.1 to 0.5Msun and -2.00 "
@@ -39,27 +39,27 @@ class BPASSv2(SedModule):
             "between 0.1 to 0.5Msun and -2.70 from 0.5 to 100Msun), 7 ("
             "Chabrier up to 100Msun), 8 (Chabrier up to 300Msun).",
             2
-        )),
-        ("metallicity", (
+        ),
+        "metallicity": (
             "cigale_list(options=0.001 & 0.002 & 0.003 & 0.004 & 0.006 & "
             "0.008 & 0.010 & 0.014 & 0.020 & 0.030 & 0.040)",
             "Metalicity. Possible values are: 0.001, 0.002, 0.003, 0.004, "
             "0.006, 0.008, 0.010, 0.014, 0.020, 0.030, 0.040.",
             0.02
-        )),
-        ("binary", (
+        ),
+        "binary": (
             "cigale_list(options=0 & 1)",
             "Single (0) or binary (1) stellar populations.",
             0
-        )),
-        ("separation_age", (
+        ),
+        "separation_age": (
             "cigale_list(dtype=int, minvalue=0)",
             "Age [Myr] of the separation between the young and the old star "
             "populations. The default value in 10^7 years (10 Myr). Set "
             "to 0 not to differentiate ages (only an old population).",
             10
-        ))
-    ])
+        ),
+    }
 
     def _init_code(self):
         """Read the SSP from the database."""
@@ -68,11 +68,75 @@ class BPASSv2(SedModule):
         self.separation_age = int(self.parameters["separation_age"])
         self.binary = bool(self.parameters["binary"])
 
-        with Database() as db:
-            self.ssp = db.get_bpassv2(self.imf, self.metallicity, self.binary)
+        with SimpleDatabase("bpassv2") as db:
+            self.ssp = db.get(imf=self.imf, Z=self.metallicity,
+                              binary=self.binary)
 
-        self.wave = self.ssp.wavelength_grid
+        self.wave = self.ssp.wl
         self.w_lymanc = np.where(self.wave <= 91.1)
+
+    def convolve(self, sfh):
+        """Convolve the SSP with a Star Formation History
+
+        Given an SFH, this method convolves the info table and the SSP
+        luminosity spectrum.
+
+        Parameters
+        ----------
+        sfh: array of floats
+            Star Formation History in Msun/yr.
+
+        Returns
+        -------
+        spec_young: array of floats
+            Spectrum in W/nm of the young stellar populations.
+        spec_old: array of floats
+            Same as spec_young but for the old stellar populations.
+        info_young: dictionary
+            Dictionary containing various information from the *.?color tables
+            for the young stellar populations:
+            * "m_star": Total mass in stars in Msun
+            * "m_gas": Mass returned to the ISM by evolved stars in Msun
+            * "n_ly": rate of H-ionizing photons (s-1)
+        info_old : dictionary
+            Same as info_young but for the old stellar populations.
+        info_all: dictionary
+            Same as info_young but for the entire stellar population. Also
+            contains "age_mass", the stellar mass-weighted age
+
+        """
+        # We cut the SSP to the maximum age considered to simplify the
+        # computation. We take only the first three elements from the
+        # info table as the others do not make sense when convolved with the
+        # SFH (break strength).
+        info = self.ssp.info[:, :sfh.size]
+        spec = self.ssp.spec[:, :sfh.size]
+
+        # The convolution is just a matter of reverting the SFH and computing
+        # the sum of the data from the SSP one to one product. This is done
+        # using the dot product. The 1e6 factor is because the SFH is in solar
+        # mass per year.
+        info_young = 1e6 * np.dot(info[:, :self.separation_age],
+                                  sfh[-self.separation_age:][::-1])
+        spec_young = 1e6 * np.dot(spec[:, :self.separation_age],
+                                  sfh[-self.separation_age:][::-1])
+
+        info_old = 1e6 * np.dot(info[:, self.separation_age:],
+                                sfh[:-self.separation_age][::-1])
+        spec_old = 1e6 * np.dot(spec[:, self.separation_age:],
+                                sfh[:-self.separation_age][::-1])
+
+        info_all = info_young + info_old
+
+        info_young = dict(zip(["m_star", "n_ly"], info_young))
+        info_old = dict(zip(["m_star", "n_ly"], info_old))
+        info_all = dict(zip(["m_star", "n_ly"], info_all))
+
+        info_all['age_mass'] = np.average(self.ssp.t[:sfh.size],
+                                          weights=info[0, :] * sfh[::-1])
+
+        return spec_young, spec_old, info_young, info_old, info_all
+
 
     def process(self, sed):
         """Add the convolution of a Bruzual and Charlot SSP to the SED
@@ -83,7 +147,7 @@ class BPASSv2(SedModule):
             SED object.
 
         """
-        out = self.ssp.convolve(sed.sfh, self.separation_age)
+        out = self.convolve(sed.sfh)
         spec_young, spec_old, info_young, info_old, info_all = out
 
         # We compute the Lyman continuum luminosity as it is important to
