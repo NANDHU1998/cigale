@@ -85,10 +85,12 @@ class Map:
             inv_err2 = 1.0 / err[band] ** 2.0
             model = self.weights[band]
             num += model * (flux * inv_err2)
-            denom += model ** 2.0 * inv_err2
+            denom += model**2.0 * inv_err2
 
         alpha = num / denom
-        chi2 = np.sum([((self.weights[k] * alpha - fl[k]) / err[k]) ** 2.0 for k in fl], axis=0)
+        chi2 = np.sum(
+            [((self.weights[k] * alpha - fl[k]) / err[k]) ** 2.0 for k in fl], axis=0
+        )
 
         return np.exp(-0.5 * chi2), alpha
 
@@ -98,8 +100,7 @@ class Map:
             dist2 = np.roll(self.dist2, bmu, axis=np.arange(len(bmu)))
         else:
             slices = tuple(
-                slice(s - bmu[i], s * 2 - bmu[i])
-                for i, s in enumerate(self.shape)
+                slice(s - bmu[i], s * 2 - bmu[i]) for i, s in enumerate(self.shape)
             )
             dist2 = self.dist2[(*slices, None)]
 
@@ -113,9 +114,7 @@ class SOM:
     def _init_func(self):
         self.alpha = functions(self.learn_mode, self.n, self.a1, self.a2)
         self.sigma2 = (
-            functions(
-                self.neighborhood_mode, self.n, np.max(self.map.shape) / 2, 1
-            )
+            functions(self.neighborhood_mode, self.n, np.max(self.map.shape) / 2, 1)
             ** 2.0
         )
 
@@ -128,9 +127,7 @@ class SOM:
             indices = self.rng.integers(0, Xsize, self.shape)
             self.map.weights = {k: X[k][indices] for k in X}
         else:
-            raise ValueError(
-                f"Invalid init mode: {self.init_}."
-            )
+            raise ValueError(f"Invalid init mode: {self.init_}.")
 
     def train(self, X):
         self._init_map(X)
@@ -210,10 +207,7 @@ class SupervisedSOM(SOM):
         self.learn_mode = learn_mode
 
         self.map = Map(
-            self.usom.shape,
-            self.usom.metric,
-            self.usom.topology,
-            self.usom.periodic
+            self.usom.shape, self.usom.metric, self.usom.topology, self.usom.periodic
         )
 
         self._init_func()
@@ -256,14 +250,17 @@ class SupervisedSOM(SOM):
             errors |= {k: np.nan for k in self.map.weights | self.usom.map.weights}
         else:
             likelihood, alpha = self.usom.map.likelihood(x)
-            likelihood *= 1. / np.sum(likelihood)
+            likelihood *= 1.0 / np.sum(likelihood)
             likelihood = likelihood.ravel()
             for k in self.map.weights:
-                results[k], errors[k] = weighted_param((self.map.weights[k] * alpha).ravel(), likelihood)
+                results[k], errors[k] = weighted_param(
+                    (self.map.weights[k] * alpha).ravel(), likelihood
+                )
 
             for k in self.usom.map.weights:
-                results[k], errors[k] = weighted_param((self.usom.map.weights[k] * alpha).ravel(), likelihood)
-
+                results[k], errors[k] = weighted_param(
+                    (self.usom.map.weights[k] * alpha).ravel(), likelihood
+                )
 
         results = {}
         errors = {}
@@ -272,15 +269,16 @@ class SupervisedSOM(SOM):
             errors |= {k: np.nan for k in self.map.weights | self.usom.map.weights}
         else:
             likelihood, alpha = self.usom.map.likelihood(x)
-            likelihood *= 1. / np.sum(likelihood)
+            likelihood *= 1.0 / np.sum(likelihood)
             likelihood = likelihood.ravel()
             for k in self.map.weights:
-                results[k], errors[k] = weighted_param((self.map.weights[k] * alpha).ravel(), likelihood)
+                results[k], errors[k] = weighted_param(
+                    (self.map.weights[k] * alpha).ravel(), likelihood
+                )
 
             for k in self.usom.map.weights:
-                results[k], errors[k] = weighted_param((self.usom.map.weights[k] * alpha).ravel(), likelihood)
-
-
-
+                results[k], errors[k] = weighted_param(
+                    (self.usom.map.weights[k] * alpha).ravel(), likelihood
+                )
 
         return results, errors

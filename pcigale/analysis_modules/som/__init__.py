@@ -18,7 +18,6 @@ reduced χ²) is given for each observation.
 """
 
 import multiprocessing as mp
-import pickle
 
 import numpy as np
 

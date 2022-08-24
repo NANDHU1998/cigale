@@ -1,12 +1,9 @@
-from copy import deepcopy
-from pathlib import Path
-import pickle
-
 import numpy as np
 
 from ...warehouse import SedWarehouse
 from pcigale.analysis_modules.som.som import UnsupervisedSOM, SupervisedSOM
 from .utils import weighted_param
+
 
 def init_sed(models, counter):
     """Initializer of the pool of processes to share variables between workers.
@@ -111,6 +108,7 @@ def som():
 
     return som
 
+
 def somz(iz, z):
     if z == np.nan:
         usom = UnsupervisedSOM(shape=(30, 30), n=10000, periodic=True)
@@ -132,6 +130,7 @@ def somz(iz, z):
 
     gbl_counter.inc()
     return (z, ssom)
+
 
 def fit(idx, obs):
     """Worker process to analyse the PDF and estimate parameters values and
@@ -155,9 +154,8 @@ def fit(idx, obs):
         likelihood, alpha = som.usom.map.likelihood(obs)
         bmu = np.unravel_index(np.argmax(likelihood), likelihood.shape)
 
-        likelihood *= 1. / np.sum(likelihood)
+        likelihood *= 1.0 / np.sum(likelihood)
         likelihood = likelihood.ravel()
-
 
         for k in gbl_results.bayes.intmean:
             mean, std = weighted_param(som.map.weights[k].ravel(), likelihood)

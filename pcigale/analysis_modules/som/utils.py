@@ -1,11 +1,8 @@
 from functools import lru_cache
-from pathlib import Path
 
 from astropy import log
 from ...utils.cosmology import luminosity_distance
 import numpy as np
-from scipy import optimize
-from scipy.special import erf
 
 log.setLevel("ERROR")
 
@@ -72,7 +69,7 @@ def _compute_scaling(models, obs, corr_dz, wz):
         inv_err2 = 1.0 / obs.flux_err[band] ** 2.0
         model = models.flux[band][wz]
         num += model * (flux * inv_err2)
-        denom += model ** 2.0 * inv_err2
+        denom += model**2.0 * inv_err2
 
     for name, prop in obs.extprop.items():
         # Multiplications are faster than divisions, so we directly use the
@@ -80,9 +77,10 @@ def _compute_scaling(models, obs, corr_dz, wz):
         inv_err2 = 1.0 / obs.extprop_err[name] ** 2.0
         model = models.extprop[name][wz]
         num += model * (prop * inv_err2 * corr_dz)
-        denom += model ** 2.0 * (inv_err2 * corr_dz ** 2.0)
+        denom += model**2.0 * (inv_err2 * corr_dz**2.0)
 
     return num / denom
+
 
 def weighted_param(param, weights):
     """Compute the weighted mean and standard deviation of an array of data.
