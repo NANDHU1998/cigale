@@ -404,11 +404,11 @@ def build_bpassv2(bpassres):
         "135all_100": 4,
         "170_100": 5,
         "170_300": 6,
-        "chab100": 7,
-        "chab300": 8
+        "_chab100": 7,
+        "_chab300": 8
     }
 
-    basename = "{}-{}-imf_{}.z{}.dat.gz"
+    basename = "{}-{}-imf{}.z{}.dat.gz"
 
     for key_metal, key_imf, binary in itertools.product(metal, imf,
                                                         ['bin', 'sin']):
@@ -422,6 +422,7 @@ def build_bpassv2(bpassres):
         # As BPASS models are very large, it is unlikely that they are all
         # available, so we skips the models that are not present
         if not Path(specname).is_file():
+            print(f"FILE NOT FOUND: {specname}")
             continue
 
         print(f"Importing {specname}...")
