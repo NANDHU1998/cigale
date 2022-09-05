@@ -1,7 +1,7 @@
 from itertools import repeat
 
 import matplotlib
-from astropy.table import Table, vstack
+from astropy.table import Table, Column, vstack
 
 matplotlib.use("Agg")
 import matplotlib.gridspec as gridspec
@@ -43,6 +43,7 @@ class SED(Plotter):
             mod = Table.read(outdir / BEST_RESULTS)
 
             # Replace masked values by NaN to suppress warnings
+            obs["id"] = Column(obs["id"])
             obs = obs.filled(np.nan)
             mod = mod.filled(np.nan)
             observed = True
