@@ -120,21 +120,29 @@ class NebularEmission(SedModule):
                                           zip(self.lines_template.wl,
                                               self.lines_template.spec)))
 
-            new_wave = np.array([])
-            for line_wave in self.lines_template.wl:
-                width = line_wave * self.lines_width * 1e3 / cst.c
-                new_wave = np.concatenate((new_wave,
-                                            np.linspace(line_wave - 3. * width,
-                                                        line_wave + 3. * width,
-                                                        9)))
-            new_wave.sort()
-            new_flux = np.zeros_like(new_wave)
+            width = 1e3 / cst.c * self.lines_width * self.lines_template.wl
+            new_wave = np.sort(
+                np.linspace(
+                    self.lines_template.wl - 3.0 * width,
+                    self.lines_template.wl + 3.0 * width,
+                    9,
+                ),
+                axis=None,
+            )
+
             log2 = np.log(2)
-            for line_flux, line_wave in zip(self.lines_template.spec, self.lines_template.wl):
-                width = line_wave * self.lines_width * 1e3 / cst.c
-                new_flux += (line_flux * np.exp(- 4. * log2 *
-                            (new_wave - line_wave) ** 2. / (width * width)) /
-                            (width * np.sqrt(np.pi / log2) / 2.))
+            new_flux = np.sum(
+                self.lines_template.spec
+                * np.exp(
+                    -4.0
+                    * log2
+                    * (new_wave[:, np.newaxis] - self.lines_template.wl) ** 2.0
+                    / (width * width)
+                )
+                / (0.5 * np.sqrt(np.pi / log2) * width),
+                axis=-1,
+            )
+
             self.lines_template.wl = new_wave
             self.lines_template.spec = new_flux
 
