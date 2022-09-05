@@ -244,8 +244,8 @@ class SED(Plotter):
                         sed["stellar.young"][wsed] + sed["stellar.old"][wsed]
                     )
 
-                    if "nebular.absoroption_young" in sed.columns:
-                        spectrum += sed["nebular.absortion_young"][wsed]
+                    if "nebular.absorption_young" in sed.columns:
+                        spectrum += sed["nebular.absorption_young"][wsed]
                         spectrum += sed["nebular.absorption_old"][wsed]
 
                     if "attenuation.stellar.young" in sed.columns:

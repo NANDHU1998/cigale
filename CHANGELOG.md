@@ -13,6 +13,7 @@
 - FITS verification warnings have been disabled as they do not indicate any real issue with the generated FITS tables. (Médéric Boquien)
 - It is now once again possible to compute models using a parameters file. (Médéric Boquien)
 - The `--outdir` option was broken due to a workaround that was applied to preserve the compatibility with older ConfigObj versions and the way the input data file was handled. It is now more robust. (Médéric Boquien, reported by Marjorie Decleir)
+- The absorption of the Lyman continuum stellar emission is now correctly included in the plots. (Médéric Boquien)
 ### Optimised
 
 ## 2022.1 (2022-07-04)
