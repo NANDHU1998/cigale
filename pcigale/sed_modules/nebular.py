@@ -121,14 +121,14 @@ class NebularEmission(SedModule):
                                               self.lines_template.spec)))
 
             width = 1e3 / cst.c * self.lines_width * self.lines_template.wl
-            new_wave = np.sort(
+            new_wave = np.ravel(
                 np.linspace(
                     self.lines_template.wl - 3.0 * width,
                     self.lines_template.wl + 3.0 * width,
                     9,
-                ),
-                axis=None,
+                )
             )
+            new_wave = np.sort(np.hstack((new_wave, self.cont_template.wl)))
 
             log2 = np.log(2)
             new_flux = np.sum(
@@ -142,9 +142,13 @@ class NebularEmission(SedModule):
                 / (0.5 * np.sqrt(np.pi / log2) * width),
                 axis=-1,
             )
-
             self.lines_template.wl = new_wave
             self.lines_template.spec = new_flux
+
+            self.cont_template.spec = np.interp(
+                new_wave, self.cont_template.wl, self.cont_template.spec
+            )
+            self.cont_template.wl = new_wave
 
             # To take into acount the escape fraction and the fraction of Lyman
             # continuum photons absorbed by dust we correct by a factor
