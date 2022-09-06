@@ -279,23 +279,15 @@ class SED(Plotter):
                     )
 
                 # Nebular emission
-                if "nebular" in series and "nebular.lines_young" in sed.columns:
+                if "nebular" in series and "nebular.emission_young" in sed.columns:
                     spectrum = (
-                        sed["nebular.lines_young"][wsed]
-                        + sed["nebular.lines_old"][wsed]
-                        + sed["nebular.continuum_young"][wsed]
-                        + sed["nebular.continuum_old"][wsed]
+                        sed["nebular.emission_young"][wsed]
+                        + sed["nebular.emission_old"][wsed]
                     )
 
-                    if "attenuation.nebular.lines_young" in sed.columns:
-                        spectrum += sed["attenuation.nebular.lines_young"][wsed]
-                        spectrum += sed["attenuation.nebular.lines_old"][wsed]
-                        spectrum += sed["attenuation.nebular.continuum_young"][
-                            wsed
-                        ]
-                        spectrum += sed["attenuation.nebular.continuum_old"][
-                            wsed
-                        ]
+                    if "attenuation.nebular.emission_young" in sed.columns:
+                        spectrum += sed["attenuation.nebular.emission_young"][wsed]
+                        spectrum += sed["attenuation.nebular.emission_old"][wsed]
 
                     ax1.loglog(
                         wavelength_spec[wsed],
