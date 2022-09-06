@@ -1,7 +1,7 @@
 from itertools import repeat
 
 import matplotlib
-from astropy.table import Table, vstack
+from astropy.table import Table, Column, vstack
 
 matplotlib.use("Agg")
 import matplotlib.gridspec as gridspec
@@ -43,6 +43,7 @@ class SED(Plotter):
             mod = Table.read(outdir / BEST_RESULTS)
 
             # Replace masked values by NaN to suppress warnings
+            obs["id"] = Column(obs["id"])
             obs = obs.filled(np.nan)
             mod = mod.filled(np.nan)
             observed = True
@@ -243,8 +244,8 @@ class SED(Plotter):
                         sed["stellar.young"][wsed] + sed["stellar.old"][wsed]
                     )
 
-                    if "nebular.absoroption_young" in sed.columns:
-                        spectrum += sed["nebular.absortion_young"][wsed]
+                    if "nebular.absorption_young" in sed.columns:
+                        spectrum += sed["nebular.absorption_young"][wsed]
                         spectrum += sed["nebular.absorption_old"][wsed]
 
                     if "attenuation.stellar.young" in sed.columns:
@@ -278,23 +279,15 @@ class SED(Plotter):
                     )
 
                 # Nebular emission
-                if "nebular" in series and "nebular.lines_young" in sed.columns:
+                if "nebular" in series and "nebular.emission_young" in sed.columns:
                     spectrum = (
-                        sed["nebular.lines_young"][wsed]
-                        + sed["nebular.lines_old"][wsed]
-                        + sed["nebular.continuum_young"][wsed]
-                        + sed["nebular.continuum_old"][wsed]
+                        sed["nebular.emission_young"][wsed]
+                        + sed["nebular.emission_old"][wsed]
                     )
 
-                    if "attenuation.nebular.lines_young" in sed.columns:
-                        spectrum += sed["attenuation.nebular.lines_young"][wsed]
-                        spectrum += sed["attenuation.nebular.lines_old"][wsed]
-                        spectrum += sed["attenuation.nebular.continuum_young"][
-                            wsed
-                        ]
-                        spectrum += sed["attenuation.nebular.continuum_old"][
-                            wsed
-                        ]
+                    if "attenuation.nebular.emission_young" in sed.columns:
+                        spectrum += sed["attenuation.nebular.emission_young"][wsed]
+                        spectrum += sed["attenuation.nebular.emission_old"][wsed]
 
                     ax1.loglog(
                         wavelength_spec[wsed],

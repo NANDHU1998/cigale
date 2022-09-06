@@ -111,32 +111,38 @@ class NebularEmission(SedModule):
 
         if self.emission:
             with Database("nebular_continuum") as db:
-                self.cont_template = db.get(Z=self.zgas, logU=self.logU, ne=self.ne)
+                cont = db.get(Z=self.zgas, logU=self.logU, ne=self.ne)
 
             with Database("nebular_lines") as db:
-                self.lines_template = db.get(Z=self.zgas, logU=self.logU, ne=self.ne)
+                lines = db.get(Z=self.zgas, logU=self.logU, ne=self.ne)
 
-            self.linesdict = dict(zip(self.lines_template.name,
-                                          zip(self.lines_template.wl,
-                                              self.lines_template.spec)))
+            self.linesdict = dict(zip(lines.name, zip(lines.wl, lines.spec)))
 
-            new_wave = np.array([])
-            for line_wave in self.lines_template.wl:
-                width = line_wave * self.lines_width * 1e3 / cst.c
-                new_wave = np.concatenate((new_wave,
-                                            np.linspace(line_wave - 3. * width,
-                                                        line_wave + 3. * width,
-                                                        9)))
-            new_wave.sort()
-            new_flux = np.zeros_like(new_wave)
+            # Build a common wavelength grid for lines+continuum
+            width = 1e3 / cst.c * self.lines_width * lines.wl
+            self.wl = np.ravel(
+                np.linspace(
+                    lines.wl - 3.0 * width,
+                    lines.wl + 3.0 * width,
+                    9,
+                )
+            )
+            self.wl = np.sort(np.hstack((self.wl, cont.wl)))
+
+            # Compute the lines+continuum spectrum
             log2 = np.log(2)
-            for line_flux, line_wave in zip(self.lines_template.spec, self.lines_template.wl):
-                width = line_wave * self.lines_width * 1e3 / cst.c
-                new_flux += (line_flux * np.exp(- 4. * log2 *
-                            (new_wave - line_wave) ** 2. / (width * width)) /
-                            (width * np.sqrt(np.pi / log2) / 2.))
-            self.lines_template.wl = new_wave
-            self.lines_template.spec = new_flux
+            self.spec = np.sum(
+                lines.spec
+                * np.exp(
+                    -4.0
+                    * log2
+                    * (self.wl[:, np.newaxis] - lines.wl) ** 2.0
+                    / (width * width)
+                )
+                / (0.5 * np.sqrt(np.pi / log2) * width),
+                axis=-1,
+            )
+            self.spec += np.interp(self.wl, cont.wl, cont.spec)
 
             # To take into acount the escape fraction and the fraction of Lyman
             # continuum photons absorbed by dust we correct by a factor
@@ -187,8 +193,6 @@ class NebularEmission(SedModule):
         if self.emission:
             NLy_old = sed.info["stellar.n_ly_old"]
             NLy_young = sed.info["stellar.n_ly_young"]
-            lines = self.lines_template
-            cont = self.cont_template
 
             sed.add_info("nebular.lines_width", self.lines_width, unit="km/s")
             sed.add_info("nebular.logU", self.logU)
@@ -201,15 +205,10 @@ class NebularEmission(SedModule):
                                    ratio * NLy_old * self.corr,
                                    ratio * NLy_young * self.corr)
 
-            sed.add_contribution("nebular.lines_old", lines.wl,
-                                 lines.spec * NLy_old * self.corr)
-            sed.add_contribution("nebular.lines_young", lines.wl,
-                                 lines.spec * NLy_young * self.corr)
-
-            sed.add_contribution("nebular.continuum_old", cont.wl,
-                                 cont.spec * NLy_old * self.corr)
-            sed.add_contribution("nebular.continuum_young", cont.wl,
-                                 cont.spec * NLy_young * self.corr)
+            sed.add_contribution("nebular.emission_old", self.wl,
+                                 self.spec * NLy_old * self.corr)
+            sed.add_contribution("nebular.emission_young", self.wl,
+                                 self.spec * NLy_young * self.corr)
 
 
 # SedModule to be returned by get_module
