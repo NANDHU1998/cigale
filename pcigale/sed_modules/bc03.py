@@ -11,6 +11,7 @@ import numpy as np
 
 from . import SedModule
 from ..data import SimpleDatabase as Database
+from pcigale.sed_modules import get_module
 
 __category__ = "SSP"
 
@@ -122,6 +123,8 @@ class BC03(SedModule):
             else:
                 raise Exception(f"IMF #{self.imf} unknown")
 
+        self.rf = get_module("restframe_parameters")
+
     def process(self, sed):
         """Add the convolution of a Bruzual and Charlot SSP to the SED
 
@@ -178,6 +181,7 @@ class BC03(SedModule):
         sed.add_contribution("stellar.old", wave, spec_old)
         sed.add_contribution("stellar.young", wave, spec_young)
 
+        sed.add_info("stellar.beta0", self.rf.calz94(sed)[0])
 
 # SedModule to be returned by get_module
 Module = BC03

@@ -138,8 +138,8 @@ class SED:
             if mass_proportional:
                 self.mass_proportional_info.add(key)
         else:
-            raise KeyError("The information %s is already present "
-                           "in the SED. " % key)
+            raise KeyError(f"The information {key} is already present "
+                           "in the SED.")
 
     def add_module(self, module_name, module_conf):
         """Add a new module information to the SED.

@@ -152,13 +152,13 @@ class SimpleDatabase:
         basename = "_".join(f"{k}={v}" for k, v in sorted(primarykeys.items()))
 
         try:
-            with open(self.path / Path(f"{basename}.pickle"), "rb") as f:
+            with open(fname := self.path / Path(f"{basename}.pickle"), "rb") as f:
                 entry = pickle.load(f)
         except Exception:
             raise Exception(
                 f"Cannot read model {primarykeys}. Either the parameters were "
                 "parameters were passed incorrectly or the database has not "
-                "been built correctly."
+                f"been built correctly. {fname}"
             )
 
         return entry

@@ -14,6 +14,7 @@ from scipy.interpolate import interp1d
 
 from . import SedModule
 from ..data import SimpleDatabase as Database
+from pcigale.sed_modules import get_module
 
 
 class BC03SSPZ(SedModule):
@@ -89,6 +90,8 @@ class BC03SSPZ(SedModule):
                 }
             else:
                 raise Exception("IMF #{} unknown".format(self.imf))
+
+        self.rf = get_module("restframe_parameters")
 
     def process(self, sed):
         """Add the convolution of a Bruzual and Charlot SSP to the SED
@@ -182,6 +185,7 @@ class BC03SSPZ(SedModule):
         sed.add_contribution("stellar.old", wave, spec_old)
         sed.add_contribution("stellar.young", wave, spec_young)
 
+        sed.add_info("stellar.beta0", self.rf.calz94(sed)[0])
 
 # SedModule to be returned by get_module
 Module = BC03SSPZ

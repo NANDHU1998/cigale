@@ -155,6 +155,5 @@ class DustExtinction(SedModule):
 
         sed.add_info("attenuation.A550", self.A550)
 
-
 # SedModule to be returned by get_module
 Module = DustExtinction

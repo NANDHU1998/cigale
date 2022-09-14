@@ -637,6 +637,62 @@ def build_dl2014():
     db.close()
 
 
+def build_dl2021():
+    path = Path(__file__).parent / 'dl2021'
+    db = SimpleDatabase("dl2021", writable=True)
+
+    ages = ["3e6", "1e7", "1e8", "3e8", "1e9"]
+    lgus = ["0.00", "0.50", "1.00", "1.50", "2.00", "2.50", "3.00", "3.50", "4.00", "4.50", "5.00", "5.50", "6.00", "6.50", "7.00"]
+    fions = ["lo", "st", "hi"]
+    fsizes = ["sma", "std", "lrg"]
+
+    filename = path / "pahspec.out_bc03_z0.02_3e6_0.00_st_std"
+    wave = np.genfromtxt(filename, skip_header=7, usecols=0) * 1e3
+
+    # Conversion factor from erg s¯¹ H¯¹ to W nm¯¹ (kg of H)¯¹
+    conv = 1e-7 / (cst.m_p + cst.m_e) / wave
+
+    beta = {}
+    for age in ages:
+        filename = path / f"isrf_bc03_z0.02_{age}_0.00"
+        isrf_wl, isrf = data = np.genfromtxt(filename, skip_header=7, unpack=True)
+        isrf /= isrf_wl
+        isrf_wl *= 1e3
+
+        calz_wl = [(126.8, 128.4), (130.9, 131.6), (134.2, 137.1),
+                    (140.7, 151.5), (156.2, 158.3), (167.7, 174.0),
+                    (176.0, 183.3), (186.6, 189.0), (193.0, 195.0),
+                    (240.0, 258.0)]
+        w_calz94 = np.where(np.any([(isrf_wl >= wlseg[0]) & (isrf_wl <= wlseg[1])
+                                    for wlseg in calz_wl], axis=0))
+
+        isrf_wl = np.log10(isrf_wl[w_calz94])
+        isrf = np.log10(isrf[w_calz94])
+
+        X = np.stack((isrf_wl, isrf), axis=0)
+        X -= np.average(X, axis=1)[:, None]
+        ssxm, ssxym, _, _ = np.dot(X, X.T).flat
+
+        beta[age] = ssxym / ssxm
+
+    iter_params = ((age, lgu, fion, fsize)
+                   for age in ages
+                   for lgu in lgus
+                   for fion in fions
+                   for fsize in fsizes)
+
+    for age, lgu, fion, fsize in iter_params:
+        filename = path / f"pahspec.out_bc03_z0.02_{age}_{lgu}_{fion}_{fsize}"
+        print(f"Importing {filename}...")
+
+        data = np.genfromtxt(filename, skip_header=7, usecols=(2, 3, 4)).T * conv
+
+        db.add({"age": float(age), "lgu": float(lgu), "fion": fion, "fsize": fsize},
+               {"wl": wave, "spec": data.T, "beta0": beta[age]})
+
+    db.close()
+
+
 def build_fritz2006():
     path = Path(__file__).parent / "fritz2006"
     db = SimpleDatabase("fritz2006", writable=True)
@@ -958,63 +1014,68 @@ def build_themis():
 def build_base(bc03res='lr'):
     print('#' * 78)
     print("1- Importing filters...\n")
-    build_filters()
+    # build_filters()
     print("\nDONE\n")
     print('#' * 78)
 
     print("2- Importing Maraston 2005 SSP\n")
-    build_m2005()
+    # build_m2005()
     print("\nDONE\n")
     print('#' * 78)
 
     print("3- Importing Bruzual and Charlot 2003 SSP\n")
     build_bc2003_ssp(bc03res)
-    build_bc2003(bc03res)
+    # build_bc2003(bc03res)
     print("\nDONE\n")
     print('#' * 78)
 
     print("4- Importing Draine and Li (2007) models\n")
-    build_dl2007()
+    # build_dl2007()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("5- Importing the updated Draine and Li (2007) models\n")
-    build_dl2014()
+    print("5- Importing the updated Draine and Li (2014) models\n")
+    # build_dl2014()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("6- Importing Jones et al (2017) models)\n")
-    build_themis()
+    print("6- Importing the updated Draine and Li (2021) models\n")
+    build_dl2021()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("7- Importing Dale et al (2014) templates\n")
-    build_dale2014()
+    print("7- Importing Jones et al (2017) models)\n")
+    # build_themis()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("8- Importing Schreiber et al (2016) models\n")
-    build_schreiber2016()
+    print("8- Importing Dale et al (2014) templates\n")
+    # build_dale2014()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("9- Importing nebular lines and continuum\n")
-    build_nebular()
+    print("9- Importing Schreiber et al (2016) models\n")
+    # build_schreiber2016()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("10- Importing Fritz et al. (2006) models\n")
-    build_fritz2006()
+    print("10- Importing nebular lines and continuum\n")
+    # build_nebular()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("11- Importing SKIRTOR 2016 models\n")
-    build_skirtor2016()
+    print("11- Importing Fritz et al. (2006) models\n")
+    # build_fritz2006()
     print("\nDONE\n")
     print('#' * 78)
 
-    print("12- Importing the Yggdrasil SSP")
-    build_yggdrasil_ssp()
+    print("12- Importing SKIRTOR 2016 models\n")
+    # build_skirtor2016()
+    print("\nDONE\n")
+    print('#' * 78)
+
+    print("13- Importing the Yggdrasil SSP")
+    # build_yggdrasil_ssp()
     print("\nDONE\n")
     print('#' * 78)
 
