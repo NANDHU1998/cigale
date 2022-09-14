@@ -28,7 +28,7 @@ class DL2021(SedModule):
 
     """
 
-    parameters = {
+    parameter_list = {
         "lgu": (
             "cigale_list(options=0.0 & 0.5 & 1.0 & 1.5 & 2.0 & 2.5 & 3.0 & 3.5 & 4.0 & 4.5 & 5.0 & 5.5 & 6.0 & 6.5 & 7.0)",
             "log U. Possible values are: 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0",
@@ -60,17 +60,12 @@ class DL2021(SedModule):
 
         with Database("dl2021") as db:
             ages = db.parameters["age"]
-            models = np.array([db.get(age=age, lgu=lgu, fion=fion, fsize=fsize).spec
-                               for age in db.parameters["age"]
-                               for lgu in db.parameters["lgu"]])
-            print(models.shape)
-        #     models_interp = interp1d(db.parameters["logu"], models)
 
-        #     models = {
-        #         age: db.get(age=age, lgu=self.lgu, fion=fion, fsize=fsize)
-        #         for age in ages
-        #     }
-        # self.wl = models[3e6].wl
+            models = {
+                age: db.get(age=age, lgu=self.lgu, fion=fion, fsize=fsize)
+                for age in ages
+            }
+        self.wl = models[3e6].wl
 
         beta0 = np.array([model.beta0 for model in models.values()])
         # The models in memory are in W/nm for 1 kg of dust. At the same time
