@@ -1014,28 +1014,28 @@ def build_themis():
 def build_base(bc03res='lr'):
     print('#' * 78)
     print("1- Importing filters...\n")
-    # build_filters()
+    build_filters()
     print("\nDONE\n")
     print('#' * 78)
 
     print("2- Importing Maraston 2005 SSP\n")
-    # build_m2005()
+    build_m2005()
     print("\nDONE\n")
     print('#' * 78)
 
     print("3- Importing Bruzual and Charlot 2003 SSP\n")
     build_bc2003_ssp(bc03res)
-    # build_bc2003(bc03res)
+    build_bc2003(bc03res)
     print("\nDONE\n")
     print('#' * 78)
 
     print("4- Importing Draine and Li (2007) models\n")
-    # build_dl2007()
+    build_dl2007()
     print("\nDONE\n")
     print('#' * 78)
 
     print("5- Importing the updated Draine and Li (2014) models\n")
-    # build_dl2014()
+    build_dl2014()
     print("\nDONE\n")
     print('#' * 78)
 
@@ -1045,37 +1045,37 @@ def build_base(bc03res='lr'):
     print('#' * 78)
 
     print("7- Importing Jones et al (2017) models)\n")
-    # build_themis()
+    build_themis()
     print("\nDONE\n")
     print('#' * 78)
 
     print("8- Importing Dale et al (2014) templates\n")
-    # build_dale2014()
+    build_dale2014()
     print("\nDONE\n")
     print('#' * 78)
 
     print("9- Importing Schreiber et al (2016) models\n")
-    # build_schreiber2016()
+    build_schreiber2016()
     print("\nDONE\n")
     print('#' * 78)
 
     print("10- Importing nebular lines and continuum\n")
-    # build_nebular()
+    build_nebular()
     print("\nDONE\n")
     print('#' * 78)
 
     print("11- Importing Fritz et al. (2006) models\n")
-    # build_fritz2006()
+    build_fritz2006()
     print("\nDONE\n")
     print('#' * 78)
 
     print("12- Importing SKIRTOR 2016 models\n")
-    # build_skirtor2016()
+    build_skirtor2016()
     print("\nDONE\n")
     print('#' * 78)
 
     print("13- Importing the Yggdrasil SSP")
-    # build_yggdrasil_ssp()
+    build_yggdrasil_ssp()
     print("\nDONE\n")
     print('#' * 78)
 
